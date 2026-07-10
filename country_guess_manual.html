@@ -17,6 +17,22 @@
             --success-hover: #059669;
             --error: #dc2626;
             --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+            --focus-shadow: 0 0 0 3px rgba(34, 34, 34, 0.08);
+            --correct-text: #065f46;
+            --incorrect-text: #991b1b;
+        }
+
+        body.dark-mode {
+            --bg: #000000;
+            --text: #e2e8f0;
+            --muted: #94a3b8;
+            --accent: #1e293b;
+            --border: #2d3748;
+            --primary: #ffffff;
+            --primary-hover: #e2e8f0;
+            --focus-shadow: 0 0 0 3px rgba(248, 250, 252, 0.15);
+            --correct-text: #34d399;
+            --incorrect-text: #f87171;
         }
 
         * {
@@ -54,7 +70,7 @@
         }
 
         canvas {
-            background-color: #ffffff;
+            background-color: var(--bg);
             border: 1px solid var(--border);
             border-radius: 8px;
             max-width: 100%;
@@ -86,7 +102,7 @@
             border: 1px solid var(--border);
             border-radius: 8px;
             width: 100%;
-            background-color: #ffffff;
+            background-color: var(--bg);
             color: var(--text);
             transition: all 0.15s ease;
         }
@@ -94,11 +110,12 @@
         input[type="text"]:focus {
             outline: none;
             border-color: var(--text);
-            box-shadow: 0 0 0 3px rgba(34, 34, 34, 0.08);
+            box-shadow: var(--focus-shadow);
         }
 
         input[type="text"]:disabled {
-            background-color: #f9f9f9;
+            background-color: var(--bg);
+            opacity: 0.6;
             color: var(--muted);
             cursor: not-allowed;
         }
@@ -108,7 +125,7 @@
             top: 100%;
             left: 0;
             right: 0;
-            background-color: #ffffff;
+            background-color: var(--bg);
             border: 1px solid var(--border);
             border-radius: 8px;
             margin-top: 4px;
@@ -125,7 +142,7 @@
             transition: background-color 0.1s ease;
             font-size: 0.95rem;
             color: var(--text);
-            border-bottom: 1px solid #f4f4f4;
+            border-bottom: 1px solid var(--border);
         }
 
         .autocomplete-item:last-child {
@@ -154,7 +171,7 @@
             font-family: inherit;
             font-weight: 400;
             color: var(--text);
-            background-color: #ffffff;
+            background-color: var(--bg);
             border: 1px solid var(--border);
             border-radius: 8px;
             cursor: pointer;
@@ -170,28 +187,18 @@
 
         .btn-primary {
             background-color: var(--text);
-            color: #ffffff;
+            color: var(--bg);
             border-color: var(--text);
         }
         .btn-primary:hover {
-            background-color: #000000;
-            border-color: #000000;
+            background-color: var(--primary-hover);
+            border-color: var(--primary-hover);
         }
         .btn-primary:disabled {
             background-color: var(--accent);
             border-color: var(--border);
             color: var(--muted);
             cursor: not-allowed;
-        }
-
-        .btn-success {
-            background-color: #ffffff;
-            color: #10b981;
-            border-color: #10b981;
-            display: none;
-        }
-        .btn-success:hover {
-            background-color: rgba(16, 185, 129, 0.05);
         }
 
         .btn-secondary:hover {
@@ -212,13 +219,13 @@
 
         .message-correct {
             background-color: rgba(16, 185, 129, 0.04);
-            color: #065f46;
+            color: var(--correct-text);
             border: 1px solid rgba(16, 185, 129, 0.15);
         }
 
         .message-incorrect {
             background-color: rgba(220, 38, 38, 0.04);
-            color: #991b1b;
+            color: var(--incorrect-text);
             border: 1px solid rgba(220, 38, 38, 0.15);
         }
 
@@ -231,7 +238,7 @@
         }
 
         .stat-card {
-            background: #ffffff;
+            background: var(--bg);
             border: 1px solid var(--border);
             border-radius: 8px;
             padding: 14px 12px;
@@ -330,6 +337,7 @@
                 </div>
 
                 <div class="footer-actions">
+                    <button id="themeToggleBtn" class="btn-reset" onclick="toggleTheme()" style="margin-right: 12px;">Dark Mode</button>
                     <button class="btn-reset" onclick="resetState()">Reset Progress</button>
                 </div>
             </div>
@@ -337,6 +345,14 @@
     </main>
 
     <script>
+        // Apply theme immediately to prevent layout flash
+        (function() {
+            const savedTheme = localStorage.getItem('country_guesser_theme');
+            if (savedTheme === 'dark') {
+                document.body.classList.add('dark-mode');
+            }
+        })();
+
         let allFeatures = [];
         let targetCountryName = "";
         let targetRings = [];
@@ -627,22 +643,26 @@
             const centerX = (minX + maxX) / 2;
             const centerY = (minY + maxY) / 2;
 
+            const isDark = document.body.classList.contains('dark-mode');
+            const strokeColor = isDark ? '#e2e8f0' : '#222222';
+            const primaryFill = isDark ? 'rgba(226, 232, 240, 0.12)' : 'rgba(34, 34, 34, 0.08)';
+            const zoomFill = isDark ? 'rgba(226, 232, 240, 0.25)' : 'rgba(34, 34, 34, 0.15)';
+            const fadeStroke = isDark ? 'rgba(148, 163, 184, 0.3)' : 'rgba(111, 111, 111, 0.25)';
+            const fadeFill = isDark ? 'rgba(148, 163, 184, 0.05)' : 'rgba(111, 111, 111, 0.04)';
+
             // Draw all parts, highlighting the active part if focused
             targetFeature.parts.forEach((part, index) => {
                 if (currentPartIndex === -1) {
-                    // Normal state: all parts highlighted equally in gray
-                    ctx.fillStyle = 'rgba(34, 34, 34, 0.08)';
-                    ctx.strokeStyle = '#222222';
+                    ctx.fillStyle = primaryFill;
+                    ctx.strokeStyle = strokeColor;
                     ctx.lineWidth = 2.0;
                 } else if (index === currentPartIndex) {
-                    // Zoom state: active part highlighted
-                    ctx.fillStyle = 'rgba(34, 34, 34, 0.15)';
-                    ctx.strokeStyle = '#222222';
+                    ctx.fillStyle = zoomFill;
+                    ctx.strokeStyle = strokeColor;
                     ctx.lineWidth = 2.5;
                 } else {
-                    // Zoom state: non-active parts faded
-                    ctx.fillStyle = 'rgba(111, 111, 111, 0.04)';
-                    ctx.strokeStyle = 'rgba(111, 111, 111, 0.25)';
+                    ctx.fillStyle = fadeFill;
+                    ctx.strokeStyle = fadeStroke;
                     ctx.lineWidth = 1.5;
                 }
 
@@ -928,8 +948,37 @@
             }
         });
 
+        // Theme switching logic
+        function loadTheme() {
+            const savedTheme = localStorage.getItem('country_guesser_theme');
+            const themeBtn = document.getElementById('themeToggleBtn');
+            if (savedTheme === 'dark') {
+                document.body.classList.add('dark-mode');
+                if (themeBtn) themeBtn.textContent = "Light Mode";
+            } else {
+                document.body.classList.remove('dark-mode');
+                if (themeBtn) themeBtn.textContent = "Dark Mode";
+            }
+        }
+
+        function toggleTheme() {
+            const isDark = document.body.classList.toggle('dark-mode');
+            localStorage.setItem('country_guesser_theme', isDark ? 'dark' : 'light');
+            
+            const themeBtn = document.getElementById('themeToggleBtn');
+            if (themeBtn) {
+                themeBtn.textContent = isDark ? "Light Mode" : "Dark Mode";
+            }
+            
+            drawCountryOutline();
+            guessInput.focus();
+        }
+
         // Start loading the map on load
-        window.onload = initGame;
+        window.onload = function() {
+            loadTheme();
+            initGame();
+        };
     </script>
 </body>
 </html>
