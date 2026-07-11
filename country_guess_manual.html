@@ -357,6 +357,11 @@
         let targetCountryName = "";
         let targetRings = [];
         let currentPartIndex = -1; // -1 means show the entire country
+        let isAnswered = false;
+        let userZoom = 1.0;
+        let userPanX = 0;
+        let userPanY = 0;
+        let currentScale = 1.0;
 
         const canvas = document.getElementById('mapCanvas');
         const ctx = canvas.getContext('2d');
@@ -540,6 +545,11 @@
         // Pick the next country using adaptive probability rules
         function pickRandomCountry() {
             // Reset UI
+            isAnswered = false;
+            userZoom = 1.0;
+            userPanX = 0;
+            userPanY = 0;
+            canvas.style.cursor = 'default';
             guessInput.value = "";
             guessInput.disabled = false;
             guessBtn.style.display = "inline-block";
@@ -638,10 +648,12 @@
 
             if (width === 0 || height === 0) return;
 
-            const padding = 30;
-            const scale = Math.min((canvas.width - padding*2) / width, (canvas.height - padding*2) / height);
-            const centerX = (minX + maxX) / 2;
-            const centerY = (minY + maxY) / 2;
+            const padding = isAnswered ? 60 : 30;
+            const baseScale = Math.min((canvas.width - padding*2) / width, (canvas.height - padding*2) / height);
+            const scale = baseScale * userZoom;
+            const centerX = (minX + maxX) / 2 + userPanX;
+            const centerY = (minY + maxY) / 2 + userPanY;
+            currentScale = scale;
 
             const isDark = document.body.classList.contains('dark-mode');
             const strokeColor = isDark ? '#e2e8f0' : '#222222';
@@ -649,6 +661,45 @@
             const zoomFill = isDark ? 'rgba(226, 232, 240, 0.25)' : 'rgba(34, 34, 34, 0.15)';
             const fadeStroke = isDark ? 'rgba(148, 163, 184, 0.3)' : 'rgba(111, 111, 111, 0.25)';
             const fadeFill = isDark ? 'rgba(148, 163, 184, 0.05)' : 'rgba(111, 111, 111, 0.04)';
+
+            // Draw neighboring countries first during answer reveal
+            if (isAnswered) {
+                const visibleMinX = centerX - (canvas.width / 2) / scale;
+                const visibleMaxX = centerX + (canvas.width / 2) / scale;
+                const visibleMinY = centerY - (canvas.height / 2) / scale;
+                const visibleMaxY = centerY + (canvas.height / 2) / scale;
+
+                const visibleFeatures = allFeatures.filter(f => {
+                    if (!f.bbox) return false;
+                    if (f.properties.name === targetCountryName) return false;
+                    return f.bbox.minX <= visibleMaxX &&
+                           f.bbox.maxX >= visibleMinX &&
+                           f.bbox.minY <= visibleMaxY &&
+                           f.bbox.maxY >= visibleMinY;
+                });
+
+                visibleFeatures.forEach(feature => {
+                    if (!feature.parts) return;
+                    ctx.fillStyle = fadeFill;
+                    ctx.strokeStyle = fadeStroke;
+                    ctx.lineWidth = 1.0;
+
+                    feature.parts.forEach(part => {
+                        part.rings.forEach(ring => {
+                            ctx.beginPath();
+                            ring.forEach((coord, i) => {
+                                let x = canvas.width / 2 + (coord[0] - centerX) * scale;
+                                let y = canvas.height / 2 - (coord[1] - centerY) * scale;
+                                if (i === 0) ctx.moveTo(x, y);
+                                else ctx.lineTo(x, y);
+                            });
+                            ctx.closePath();
+                            ctx.fill();
+                            ctx.stroke();
+                        });
+                    });
+                });
+            }
 
             // Draw all parts, highlighting the active part if focused
             targetFeature.parts.forEach((part, index) => {
@@ -726,7 +777,7 @@
             }
 
             if (isCorrect) {
-                messageEl.textContent = "🎉 Correct! It's " + targetCountryName + "!";
+                messageEl.innerHTML = "Correct:<br>" + escapeHTML(targetCountryName);
                 messageEl.className = "message-correct";
                 
                 gameState.stats.correct++;
@@ -745,7 +796,7 @@
                     gameState.reviewQueue.splice(qIndex, 1);
                 }
             } else {
-                messageEl.textContent = "❌ Incorrect! It was " + targetCountryName + ".";
+                messageEl.innerHTML = "Incorrect:<br>" + escapeHTML(targetCountryName);
                 messageEl.className = "message-incorrect";
 
                 gameState.stats.total++;
@@ -762,6 +813,10 @@
 
             saveState();
             updateStatsUI();
+            
+            isAnswered = true;
+            canvas.style.cursor = 'grab';
+            drawCountryOutline();
             
             // Toggle buttons
             guessInput.disabled = true;
@@ -931,8 +986,91 @@
             }
         });
 
-        // Global keyboard listener for left/right arrows to cycle country parts
+        // Mouse panning and zooming events on canvas
+        let isDragging = false;
+        let lastMouseX = 0;
+        let lastMouseY = 0;
+
+        canvas.addEventListener('wheel', function(e) {
+            if (!isAnswered) return;
+            e.preventDefault();
+            
+            const zoomFactor = 1.1;
+            if (e.deltaY < 0) {
+                userZoom = Math.min(50.0, userZoom * zoomFactor);
+            } else {
+                userZoom = Math.max(0.1, userZoom / zoomFactor);
+            }
+            drawCountryOutline();
+        }, { passive: false });
+
+        canvas.addEventListener('mousedown', function(e) {
+            if (!isAnswered) return;
+            isDragging = true;
+            lastMouseX = e.clientX;
+            lastMouseY = e.clientY;
+            canvas.style.cursor = 'grabbing';
+        });
+
+        canvas.addEventListener('mousemove', function(e) {
+            if (!isDragging || !isAnswered) return;
+            
+            const dx = e.clientX - lastMouseX;
+            const dy = e.clientY - lastMouseY;
+            
+            userPanX -= dx / currentScale;
+            userPanY += dy / currentScale;
+            
+            lastMouseX = e.clientX;
+            lastMouseY = e.clientY;
+            
+            drawCountryOutline();
+        });
+
+        window.addEventListener('mouseup', function(e) {
+            if (isDragging) {
+                isDragging = false;
+                if (isAnswered) {
+                    canvas.style.cursor = 'grab';
+                } else {
+                    canvas.style.cursor = 'default';
+                }
+            }
+        });
+
+        // Global keyboard listener for left/right arrows to cycle country parts, and hjkl/io for pan/zoom
         document.addEventListener('keydown', function(e) {
+            if (isAnswered) {
+                const panStep = 20 / currentScale;
+                const key = e.key.toLowerCase();
+                
+                if (key === 'h') {
+                    e.preventDefault();
+                    userPanX -= panStep;
+                    drawCountryOutline();
+                } else if (key === 'l') {
+                    e.preventDefault();
+                    userPanX += panStep;
+                    drawCountryOutline();
+                } else if (key === 'k') {
+                    e.preventDefault();
+                    userPanY += panStep;
+                    drawCountryOutline();
+                } else if (key === 'j') {
+                    e.preventDefault();
+                    userPanY -= panStep;
+                    drawCountryOutline();
+                } else if (key === 'i') {
+                    e.preventDefault();
+                    userZoom = Math.min(50.0, userZoom * 1.1);
+                    drawCountryOutline();
+                } else if (key === 'o') {
+                    e.preventDefault();
+                    userZoom = Math.max(0.1, userZoom / 1.1);
+                    drawCountryOutline();
+                }
+            }
+
             const feature = allFeatures.find(f => f.properties.name === targetCountryName);
             if (!feature || !feature.isDispersed) return;
 
