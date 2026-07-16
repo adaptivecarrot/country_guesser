@@ -282,6 +282,271 @@
             color: var(--error);
             border-color: rgba(220, 38, 38, 0.2);
         }
+
+        /* Custom Switch */
+        .filter-card {
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 16px 20px;
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            box-shadow: var(--shadow-sm);
+        }
+        .filter-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .switch-container {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            cursor: pointer;
+            user-select: none;
+        }
+        .switch-label {
+            font-size: 0.95rem;
+            font-weight: 500;
+            color: var(--text);
+        }
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 40px;
+            height: 20px;
+            flex-shrink: 0;
+        }
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        .slider-round {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: var(--accent);
+            border: 1px solid var(--border);
+            transition: .3s;
+            border-radius: 20px;
+        }
+        .slider-round:before {
+            position: absolute;
+            content: "";
+            height: 12px;
+            width: 12px;
+            left: 3px;
+            bottom: 3px;
+            background-color: var(--text);
+            transition: .3s;
+            border-radius: 50%;
+        }
+        .switch input:checked + .slider-round {
+            background-color: var(--text);
+        }
+        .switch input:checked + .slider-round:before {
+            transform: translateX(20px);
+            background-color: var(--bg);
+        }
+        .slider-round:hover {
+            border-color: var(--text);
+        }
+
+        /* Threshold Slider Custom Styling */
+        .threshold-control {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            border-top: 1px dashed var(--border);
+            padding-top: 12px;
+            animation: slideDownFade 0.2s ease-out;
+        }
+        .threshold-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .threshold-title {
+            font-size: 0.85rem;
+            font-weight: 500;
+            color: var(--muted);
+        }
+        .threshold-badge {
+            background: var(--accent);
+            color: var(--text);
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            border: 1px solid var(--border);
+        }
+        .range-slider-container {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .range-slider {
+            flex: 1;
+            height: 6px;
+            -webkit-appearance: none;
+            appearance: none;
+            background: var(--accent);
+            border: 1px solid var(--border);
+            border-radius: 3px;
+            outline: none;
+            transition: border-color 0.15s ease;
+        }
+        .range-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: var(--text);
+            cursor: pointer;
+            transition: transform 0.1s ease;
+        }
+        .range-slider::-webkit-slider-thumb:hover {
+            transform: scale(1.15);
+        }
+        .range-slider::-moz-range-thumb {
+            width: 16px;
+            height: 16px;
+            border: none;
+            border-radius: 50%;
+            background: var(--text);
+            cursor: pointer;
+            transition: transform 0.1s ease;
+        }
+        .range-slider::-moz-range-thumb:hover {
+            transform: scale(1.15);
+        }
+        .slider-limit {
+            font-size: 0.75rem;
+            color: var(--muted);
+            min-width: 28px;
+        }
+
+        /* Modal Custom Styles */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 2000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.4);
+            backdrop-filter: blur(8px);
+            align-items: center;
+            justify-content: center;
+            padding: 1.5rem;
+            animation: fadeIn 0.2s ease;
+        }
+        .modal-content {
+            background-color: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            max-width: 480px;
+            width: 100%;
+            max-height: 80vh;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.15), 0 10px 10px -5px rgba(0, 0, 0, 0.1);
+            animation: slideUp 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .modal-header {
+            padding: 16px 20px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .modal-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin: 0;
+            color: var(--text);
+        }
+        .modal-close {
+            background: transparent;
+            border: none;
+            color: var(--muted);
+            font-size: 1.5rem;
+            cursor: pointer;
+            padding: 0;
+            line-height: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            transition: all 0.15s ease;
+        }
+        .modal-close:hover {
+            background-color: var(--accent);
+            color: var(--text);
+        }
+        .modal-body {
+            padding: 20px;
+            overflow-y: auto;
+            flex: 1;
+        }
+        .excluded-list {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 8px;
+            padding: 0;
+            margin: 0;
+            list-style: none;
+        }
+        .excluded-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 14px;
+            background: var(--accent);
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            font-size: 0.9rem;
+            transition: transform 0.1s ease, border-color 0.1s ease;
+        }
+        .excluded-item:hover {
+            transform: translateY(-1px);
+            border-color: var(--text);
+        }
+        .excluded-name {
+            font-weight: 500;
+            color: var(--text);
+        }
+        .excluded-count {
+            font-size: 0.8rem;
+            color: var(--muted);
+            background: var(--bg);
+            border: 1px solid var(--border);
+            padding: 2px 8px;
+            border-radius: 20px;
+        }
+
+        @keyframes slideDownFade {
+            from { opacity: 0; transform: translateY(-8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes slideUp {
+            from { transform: translateY(24px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
     </style>
 </head>
 <body>
@@ -308,6 +573,33 @@
                 </div>
 
                 <div id="message"></div>
+
+                <!-- Filter Settings -->
+                <div class="filter-card">
+                    <div class="filter-row">
+                        <label class="switch-container">
+                            <span class="switch">
+                                <input type="checkbox" id="filterLargeOnly" onchange="toggleFilter()">
+                                <span class="slider-round"></span>
+                            </span>
+                            <span class="switch-label">Only largeish countries</span>
+                        </label>
+                        <button id="viewExcludedBtn" class="btn-reset" onclick="openExcludedModal()" style="font-size: 0.85rem; padding: 6px 12px; border-radius: 6px;">
+                            view excluded (0)
+                        </button>
+                    </div>
+                    <div id="thresholdControl" class="threshold-control" style="display: none;">
+                        <div class="threshold-header">
+                            <span class="threshold-title">Minimum polygon complexity</span>
+                            <span class="threshold-badge"><span id="thresholdValue">500</span> edges</span>
+                        </div>
+                        <div class="range-slider-container">
+                            <span class="slider-limit">10</span>
+                            <input type="range" id="thresholdSlider" class="range-slider" min="10" max="5000" step="10" value="500" oninput="updateThreshold(this.value)">
+                            <span class="slider-limit">5000</span>
+                        </div>
+                    </div>
+                </div>
 
                 <div class="stats-grid">
                     <div class="stat-card">
@@ -339,6 +631,19 @@
                 <div class="footer-actions">
                     <button id="themeToggleBtn" class="btn-reset" onclick="toggleTheme()" style="margin-right: 12px;">Dark Mode</button>
                     <button class="btn-reset" onclick="resetState()">Reset Progress</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Excluded Countries Modal -->
+        <div id="excludedModal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3 class="modal-title">Excluded Countries</h3>
+                    <button class="modal-close" onclick="closeExcludedModal()">&times;</button>
+                </div>
+                <div id="excludedModalBody" class="modal-body">
+                    <!-- Dynamic content loaded here -->
                 </div>
             </div>
         </div>
@@ -431,9 +736,23 @@
                     return name && name !== "Antarctica";
                 });
 
-                // Standardize name property for compatibility
+                // Standardize name property and calculate edge count
                 allFeatures.forEach(f => {
                     f.properties.name = f.properties.NAME || f.properties.name;
+                    
+                    let edgeCount = 0;
+                    if (f.geometry.type === 'Polygon') {
+                        f.geometry.coordinates.forEach(ring => {
+                            edgeCount += ring.length;
+                        });
+                    } else if (f.geometry.type === 'MultiPolygon') {
+                        f.geometry.coordinates.forEach(polygon => {
+                            polygon.forEach(ring => {
+                                edgeCount += ring.length;
+                            });
+                        });
+                    }
+                    f.edgeCount = edgeCount;
                 });
 
                 // Precalculate bounding boxes, rings, and sub-parts (landmasses)
@@ -488,6 +807,20 @@
                 // Load progress from local storage
                 loadState();
 
+                // Initialize filters from loaded state
+                const filterCheckbox = document.getElementById('filterLargeOnly');
+                const thresholdSlider = document.getElementById('thresholdSlider');
+                const thresholdValue = document.getElementById('thresholdValue');
+                const thresholdControl = document.getElementById('thresholdControl');
+
+                if (filterCheckbox) filterCheckbox.checked = gameState.filterLargeOnly;
+                if (thresholdSlider) thresholdSlider.value = gameState.edgeThreshold;
+                if (thresholdValue) thresholdValue.textContent = gameState.edgeThreshold;
+                if (thresholdControl) {
+                    thresholdControl.style.display = gameState.filterLargeOnly ? 'flex' : 'none';
+                }
+                updateExcludedUI();
+
                 // Enable inputs
                 guessInput.disabled = false;
                 guessBtn.disabled = false;
@@ -512,9 +845,14 @@
                     if (!gameState.stats) gameState.stats = { correct: 0, total: 0, streak: 0, bestStreak: 0 };
                     if (!gameState.weights) gameState.weights = {};
                     if (!gameState.reviewQueue) gameState.reviewQueue = [];
+                    if (gameState.filterLargeOnly === undefined) gameState.filterLargeOnly = false;
+                    if (gameState.edgeThreshold === undefined) gameState.edgeThreshold = 500;
                 } catch (e) {
                     console.error("Failed to parse game state, using defaults", e);
                 }
+            } else {
+                gameState.filterLargeOnly = false;
+                gameState.edgeThreshold = 500;
             }
         }
 
@@ -534,9 +872,23 @@
                         total: 0,
                         streak: 0,
                         bestStreak: 0
-                    }
+                    },
+                    filterLargeOnly: false,
+                    edgeThreshold: 500
                 };
                 saveState();
+
+                const filterCheckbox = document.getElementById('filterLargeOnly');
+                const thresholdSlider = document.getElementById('thresholdSlider');
+                const thresholdValue = document.getElementById('thresholdValue');
+                const thresholdControl = document.getElementById('thresholdControl');
+
+                if (filterCheckbox) filterCheckbox.checked = false;
+                if (thresholdSlider) thresholdSlider.value = 500;
+                if (thresholdValue) thresholdValue.textContent = 500;
+                if (thresholdControl) thresholdControl.style.display = 'none';
+
+                updateExcludedUI();
                 updateStatsUI();
                 pickRandomCountry();
             }
@@ -560,21 +912,25 @@
             highlightedIndex = -1;
             guessInput.focus();
 
-            if (allFeatures.length === 0) return;
+            const activeFeatures = getActiveFeatures();
+            if (activeFeatures.length === 0) return;
 
             let selectedCountryName = "";
 
             // Check if we should pull from the review queue (45% probability if it's not empty)
-            const shouldReview = gameState.reviewQueue.length > 0 && Math.random() < 0.45;
+            const activeReviewQueue = gameState.reviewQueue.filter(name => 
+                activeFeatures.some(f => f.properties.name === name)
+            );
+            const shouldReview = activeReviewQueue.length > 0 && Math.random() < 0.45;
 
             if (shouldReview) {
                 // Pick a country from the review queue
-                const randomIndex = Math.floor(Math.random() * gameState.reviewQueue.length);
-                selectedCountryName = gameState.reviewQueue[randomIndex];
+                const randomIndex = Math.floor(Math.random() * activeReviewQueue.length);
+                selectedCountryName = activeReviewQueue[randomIndex];
             } else {
                 // Weighted random selection from the general pool
                 let totalWeight = 0;
-                const countryWeights = allFeatures.map(f => {
+                const countryWeights = activeFeatures.map(f => {
                     const name = f.properties.name;
                     // Default weight is 100 if not set
                     const w = gameState.weights[name] !== undefined ? gameState.weights[name] : 100;
@@ -596,11 +952,11 @@
             }
 
             // Find feature coordinates
-            const feature = allFeatures.find(f => f.properties.name === selectedCountryName);
+            const feature = activeFeatures.find(f => f.properties.name === selectedCountryName);
             if (!feature) {
                 // Fallback in case of mismatch
-                const randomIndex = Math.floor(Math.random() * allFeatures.length);
-                targetCountryName = allFeatures[randomIndex].properties.name;
+                const randomIndex = Math.floor(Math.random() * activeFeatures.length);
+                targetCountryName = activeFeatures[randomIndex].properties.name;
             } else {
                 targetCountryName = selectedCountryName;
             }
@@ -832,12 +1188,16 @@
             const streak = gameState.stats.streak;
             const bestStreak = gameState.stats.bestStreak;
             const accuracy = total > 0 ? Math.round((correct / total) * 100) : 0;
-            const reviewCount = gameState.reviewQueue.length;
+            
+            const activeFeatures = getActiveFeatures();
+            const activeReviewCount = gameState.reviewQueue.filter(name => 
+                activeFeatures.some(f => f.properties.name === name)
+            ).length;
 
             let masteredCount = 0;
             let practiceCount = 0;
 
-            allFeatures.forEach(f => {
+            activeFeatures.forEach(f => {
                 const name = f.properties.name;
                 const w = gameState.weights[name] !== undefined ? gameState.weights[name] : 100;
                 if (w <= 20) masteredCount++;
@@ -847,7 +1207,7 @@
             document.getElementById('statStreak').textContent = streak;
             document.getElementById('statBestStreak').textContent = bestStreak;
             document.getElementById('statAccuracy').textContent = accuracy + '%';
-            document.getElementById('statReview').textContent = reviewCount;
+            document.getElementById('statReview').textContent = activeReviewCount;
             document.getElementById('statMastered').textContent = masteredCount;
             document.getElementById('statTotal').textContent = total;
         }
@@ -879,7 +1239,8 @@
             const startsWith = [];
             const contains = [];
             
-            allFeatures.forEach(feature => {
+            const activeFeatures = getActiveFeatures();
+            activeFeatures.forEach(feature => {
                 const name = feature.properties.name;
                 const index = name.toLowerCase().indexOf(query);
                 if (index === 0) {
@@ -1040,6 +1401,9 @@
 
         // Global keyboard listener for left/right arrows to cycle country parts, and hjkl/io for pan/zoom
         document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                closeExcludedModal();
+            }
             if (isAnswered) {
                 const panStep = 20 / currentScale;
                 const key = e.key.toLowerCase();
@@ -1085,6 +1449,108 @@
                 }
             }
         });
+
+        // Filter-related helper functions
+        function getExcludedCountries() {
+            if (allFeatures.length === 0) return [];
+            return allFeatures.filter(f => f.edgeCount < gameState.edgeThreshold);
+        }
+
+        function getActiveFeatures() {
+            if (!gameState.filterLargeOnly) {
+                return allFeatures;
+            }
+            return allFeatures.filter(f => f.edgeCount >= gameState.edgeThreshold);
+        }
+
+        function toggleFilter() {
+            const filterCheckbox = document.getElementById('filterLargeOnly');
+            gameState.filterLargeOnly = filterCheckbox.checked;
+            
+            const thresholdControl = document.getElementById('thresholdControl');
+            if (thresholdControl) {
+                thresholdControl.style.display = gameState.filterLargeOnly ? 'flex' : 'none';
+            }
+            
+            saveState();
+            updateExcludedUI();
+            updateStatsUI();
+            
+            // Check if current country is excluded under new settings
+            const activeFeatures = getActiveFeatures();
+            const isCurrentActive = activeFeatures.some(f => f.properties.name === targetCountryName);
+            if (!isCurrentActive) {
+                pickRandomCountry();
+            }
+        }
+
+        function updateThreshold(val) {
+            gameState.edgeThreshold = parseInt(val);
+            document.getElementById('thresholdValue').textContent = val;
+            
+            saveState();
+            updateExcludedUI();
+            updateStatsUI();
+            
+            // Check if current country is excluded under new settings
+            const activeFeatures = getActiveFeatures();
+            const isCurrentActive = activeFeatures.some(f => f.properties.name === targetCountryName);
+            if (!isCurrentActive) {
+                pickRandomCountry();
+            }
+        }
+
+        function updateExcludedUI() {
+            const excluded = getExcludedCountries();
+            const btn = document.getElementById('viewExcludedBtn');
+            if (btn) {
+                btn.textContent = `view excluded (${excluded.length})`;
+            }
+        }
+
+        function openExcludedModal() {
+            const modal = document.getElementById('excludedModal');
+            const body = document.getElementById('excludedModalBody');
+            if (!modal || !body) return;
+
+            const excluded = getExcludedCountries();
+            // Sort alphabetically by name
+            excluded.sort((a, b) => a.properties.name.localeCompare(b.properties.name));
+
+            body.innerHTML = '';
+            if (excluded.length === 0) {
+                body.innerHTML = '<p style="text-align: center; color: var(--muted); margin: 20px 0;">No countries are currently excluded.</p>';
+            } else {
+                const ul = document.createElement('ul');
+                ul.className = 'excluded-list';
+                excluded.forEach(c => {
+                    const li = document.createElement('li');
+                    li.className = 'excluded-item';
+                    
+                    const nameSpan = document.createElement('span');
+                    nameSpan.className = 'excluded-name';
+                    nameSpan.textContent = c.properties.name;
+                    
+                    const countSpan = document.createElement('span');
+                    countSpan.className = 'excluded-count';
+                    countSpan.textContent = `${c.edgeCount} edges`;
+                    
+                    li.appendChild(nameSpan);
+                    li.appendChild(countSpan);
+                    ul.appendChild(li);
+                });
+                body.appendChild(ul);
+            }
+
+            modal.style.display = 'flex';
+        }
+
+        function closeExcludedModal() {
+            const modal = document.getElementById('excludedModal');
+            if (modal) {
+                modal.style.display = 'none';
+            }
+        }
 
         // Theme switching logic
         function loadTheme() {
