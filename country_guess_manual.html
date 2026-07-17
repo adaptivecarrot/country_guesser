@@ -283,154 +283,51 @@
             border-color: rgba(220, 38, 38, 0.2);
         }
 
-        /* Custom Switch */
-        .filter-card {
-            background: var(--bg);
-            border: 1px solid var(--border);
-            border-radius: 8px;
-            padding: 16px 20px;
-            width: 100%;
-            display: flex;
-            flex-direction: column;
-            gap: 16px;
-            box-shadow: var(--shadow-sm);
-        }
-        .filter-row {
+        /* Country List in Modal */
+        .country-list-item {
             display: flex;
             justify-content: space-between;
             align-items: center;
-        }
-        .switch-container {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            cursor: pointer;
-            user-select: none;
-        }
-        .switch-label {
+            padding: 10px 14px;
+            border-bottom: 1px solid var(--border);
             font-size: 0.95rem;
+        }
+        .country-list-item:last-child {
+            border-bottom: none;
+        }
+        .country-name {
             font-weight: 500;
             color: var(--text);
         }
-        .switch {
-            position: relative;
-            display: inline-block;
-            width: 40px;
-            height: 20px;
-            flex-shrink: 0;
-        }
-        .switch input {
-            opacity: 0;
-            width: 0;
-            height: 0;
-        }
-        .slider-round {
-            position: absolute;
-            cursor: pointer;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background-color: var(--accent);
-            border: 1px solid var(--border);
-            transition: .3s;
-            border-radius: 20px;
-        }
-        .slider-round:before {
-            position: absolute;
-            content: "";
-            height: 12px;
-            width: 12px;
-            left: 3px;
-            bottom: 3px;
-            background-color: var(--text);
-            transition: .3s;
-            border-radius: 50%;
-        }
-        .switch input:checked + .slider-round {
-            background-color: var(--text);
-        }
-        .switch input:checked + .slider-round:before {
-            transform: translateX(20px);
-            background-color: var(--bg);
-        }
-        .slider-round:hover {
-            border-color: var(--text);
-        }
-
-        /* Threshold Slider Custom Styling */
-        .threshold-control {
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-            border-top: 1px dashed var(--border);
-            padding-top: 12px;
-            animation: slideDownFade 0.2s ease-out;
-        }
-        .threshold-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        .threshold-title {
-            font-size: 0.85rem;
-            font-weight: 500;
-            color: var(--muted);
-        }
-        .threshold-badge {
-            background: var(--accent);
-            color: var(--text);
-            padding: 2px 8px;
-            border-radius: 12px;
+        .country-status-btn {
             font-size: 0.8rem;
-            font-weight: 600;
-            border: 1px solid var(--border);
-        }
-        .range-slider-container {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-        }
-        .range-slider {
-            flex: 1;
-            height: 6px;
-            -webkit-appearance: none;
-            appearance: none;
-            background: var(--accent);
-            border: 1px solid var(--border);
-            border-radius: 3px;
-            outline: none;
-            transition: border-color 0.15s ease;
-        }
-        .range-slider::-webkit-slider-thumb {
-            -webkit-appearance: none;
-            appearance: none;
-            width: 16px;
-            height: 16px;
-            border-radius: 50%;
-            background: var(--text);
+            padding: 4px 10px;
+            border-radius: 6px;
             cursor: pointer;
-            transition: transform 0.1s ease;
+            transition: all 0.15s ease;
+            width: 80px;
+            text-align: center;
+            flex: none;
         }
-        .range-slider::-webkit-slider-thumb:hover {
-            transform: scale(1.15);
-        }
-        .range-slider::-moz-range-thumb {
-            width: 16px;
-            height: 16px;
-            border: none;
-            border-radius: 50%;
-            background: var(--text);
-            cursor: pointer;
-            transition: transform 0.1s ease;
-        }
-        .range-slider::-moz-range-thumb:hover {
-            transform: scale(1.15);
-        }
-        .slider-limit {
-            font-size: 0.75rem;
+        .btn-status-active {
+            background: transparent;
             color: var(--muted);
-            min-width: 28px;
+            border: 1px solid var(--border);
+        }
+        .btn-status-active:hover {
+            background: rgba(220, 38, 38, 0.05);
+            color: var(--error);
+            border-color: rgba(220, 38, 38, 0.2);
+        }
+        .btn-status-suspended {
+            background: rgba(220, 38, 38, 0.1);
+            color: var(--error);
+            border: 1px solid rgba(220, 38, 38, 0.2);
+        }
+        .btn-status-suspended:hover {
+            background: rgba(16, 185, 129, 0.1);
+            color: var(--success);
+            border-color: rgba(16, 185, 129, 0.2);
         }
 
         /* Modal Custom Styles */
@@ -499,41 +396,7 @@
             overflow-y: auto;
             flex: 1;
         }
-        .excluded-list {
-            display: grid;
-            grid-template-columns: 1fr;
-            gap: 8px;
-            padding: 0;
-            margin: 0;
-            list-style: none;
-        }
-        .excluded-item {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 10px 14px;
-            background: var(--accent);
-            border-radius: 8px;
-            border: 1px solid var(--border);
-            font-size: 0.9rem;
-            transition: transform 0.1s ease, border-color 0.1s ease;
-        }
-        .excluded-item:hover {
-            transform: translateY(-1px);
-            border-color: var(--text);
-        }
-        .excluded-name {
-            font-weight: 500;
-            color: var(--text);
-        }
-        .excluded-count {
-            font-size: 0.8rem;
-            color: var(--muted);
-            background: var(--bg);
-            border: 1px solid var(--border);
-            padding: 2px 8px;
-            border-radius: 20px;
-        }
+
 
         @keyframes slideDownFade {
             from { opacity: 0; transform: translateY(-8px); }
@@ -570,36 +433,10 @@
                     <button id="nextBtn" class="btn-primary" onclick="pickRandomCountry()" style="display: none;">Next Country</button>
                     <button id="hintBtn" class="btn-secondary" onclick="showHint()">Hint</button>
                     <button id="cycleBtn" class="btn-secondary" onclick="cycleParts(1)" style="display: none;">Zoom Part</button>
+                    <button id="suspendBtn" class="btn-secondary" onclick="suspendCurrentCountry()">Suspend (x)</button>
                 </div>
 
                 <div id="message"></div>
-
-                <!-- Filter Settings -->
-                <div class="filter-card">
-                    <div class="filter-row">
-                        <label class="switch-container">
-                            <span class="switch">
-                                <input type="checkbox" id="filterLargeOnly" onchange="toggleFilter()">
-                                <span class="slider-round"></span>
-                            </span>
-                            <span class="switch-label">Only largeish countries</span>
-                        </label>
-                        <button id="viewExcludedBtn" class="btn-reset" onclick="openExcludedModal()" style="font-size: 0.85rem; padding: 6px 12px; border-radius: 6px;">
-                            view excluded (0)
-                        </button>
-                    </div>
-                    <div id="thresholdControl" class="threshold-control" style="display: none;">
-                        <div class="threshold-header">
-                            <span class="threshold-title">Minimum polygon complexity</span>
-                            <span class="threshold-badge"><span id="thresholdValue">500</span> edges</span>
-                        </div>
-                        <div class="range-slider-container">
-                            <span class="slider-limit">10</span>
-                            <input type="range" id="thresholdSlider" class="range-slider" min="10" max="5000" step="10" value="500" oninput="updateThreshold(this.value)">
-                            <span class="slider-limit">5000</span>
-                        </div>
-                    </div>
-                </div>
 
                 <div class="stats-grid">
                     <div class="stat-card">
@@ -630,20 +467,26 @@
 
                 <div class="footer-actions">
                     <button id="themeToggleBtn" class="btn-reset" onclick="toggleTheme()" style="margin-right: 12px;">Dark Mode</button>
+                    <button id="manageCountriesBtn" class="btn-reset" onclick="openCountriesModal()" style="margin-right: 12px;">Manage Countries (0 suspended)</button>
                     <button class="btn-reset" onclick="resetState()">Reset Progress</button>
                 </div>
             </div>
         </div>
 
-        <!-- Excluded Countries Modal -->
-        <div id="excludedModal" class="modal">
+        <!-- Manage Countries Modal -->
+        <div id="countriesModal" class="modal">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h3 class="modal-title">Excluded Countries</h3>
-                    <button class="modal-close" onclick="closeExcludedModal()">&times;</button>
+                    <h3 class="modal-title">Manage Countries</h3>
+                    <button class="modal-close" onclick="closeCountriesModal()">&times;</button>
                 </div>
-                <div id="excludedModalBody" class="modal-body">
-                    <!-- Dynamic content loaded here -->
+                <div class="modal-body" style="display: flex; flex-direction: column; overflow-y: hidden; gap: 12px;">
+                    <div style="flex-shrink: 0;">
+                        <input type="text" id="modalSearchInput" placeholder="Search countries..." autocomplete="off">
+                    </div>
+                    <div id="countriesModalBody" style="overflow-y: auto; flex: 1;">
+                        <!-- Dynamic list will be rendered here -->
+                    </div>
                 </div>
             </div>
         </div>
@@ -807,19 +650,8 @@
                 // Load progress from local storage
                 loadState();
 
-                // Initialize filters from loaded state
-                const filterCheckbox = document.getElementById('filterLargeOnly');
-                const thresholdSlider = document.getElementById('thresholdSlider');
-                const thresholdValue = document.getElementById('thresholdValue');
-                const thresholdControl = document.getElementById('thresholdControl');
-
-                if (filterCheckbox) filterCheckbox.checked = gameState.filterLargeOnly;
-                if (thresholdSlider) thresholdSlider.value = gameState.edgeThreshold;
-                if (thresholdValue) thresholdValue.textContent = gameState.edgeThreshold;
-                if (thresholdControl) {
-                    thresholdControl.style.display = gameState.filterLargeOnly ? 'flex' : 'none';
-                }
-                updateExcludedUI();
+                // Update manage countries button count
+                updateManageCountriesBtn();
 
                 // Enable inputs
                 guessInput.disabled = false;
@@ -845,14 +677,12 @@
                     if (!gameState.stats) gameState.stats = { correct: 0, total: 0, streak: 0, bestStreak: 0 };
                     if (!gameState.weights) gameState.weights = {};
                     if (!gameState.reviewQueue) gameState.reviewQueue = [];
-                    if (gameState.filterLargeOnly === undefined) gameState.filterLargeOnly = false;
-                    if (gameState.edgeThreshold === undefined) gameState.edgeThreshold = 500;
+                    if (!gameState.suspended) gameState.suspended = {};
                 } catch (e) {
                     console.error("Failed to parse game state, using defaults", e);
                 }
             } else {
-                gameState.filterLargeOnly = false;
-                gameState.edgeThreshold = 500;
+                gameState.suspended = {};
             }
         }
 
@@ -873,22 +703,11 @@
                         streak: 0,
                         bestStreak: 0
                     },
-                    filterLargeOnly: false,
-                    edgeThreshold: 500
+                    suspended: {}
                 };
                 saveState();
 
-                const filterCheckbox = document.getElementById('filterLargeOnly');
-                const thresholdSlider = document.getElementById('thresholdSlider');
-                const thresholdValue = document.getElementById('thresholdValue');
-                const thresholdControl = document.getElementById('thresholdControl');
-
-                if (filterCheckbox) filterCheckbox.checked = false;
-                if (thresholdSlider) thresholdSlider.value = 500;
-                if (thresholdValue) thresholdValue.textContent = 500;
-                if (thresholdControl) thresholdControl.style.display = 'none';
-
-                updateExcludedUI();
+                updateManageCountriesBtn();
                 updateStatsUI();
                 pickRandomCountry();
             }
@@ -912,8 +731,27 @@
             highlightedIndex = -1;
             guessInput.focus();
 
+            const suspendBtn = document.getElementById('suspendBtn');
+
             const activeFeatures = getActiveFeatures();
-            if (activeFeatures.length === 0) return;
+            if (activeFeatures.length === 0) {
+                // Handle empty state gracefully
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                ctx.fillStyle = '#94a3b8';
+                ctx.font = '16px system-ui';
+                ctx.textAlign = 'center';
+                ctx.fillText('All countries are suspended!', canvas.width/2, canvas.height/2 - 10);
+                ctx.fillText('Please unsuspend some in Manage Countries.', canvas.width/2, canvas.height/2 + 15);
+                
+                guessInput.disabled = true;
+                guessBtn.disabled = true;
+                if (suspendBtn) suspendBtn.disabled = true;
+                messageEl.textContent = "No active countries to display.";
+                messageEl.className = "message-incorrect";
+                return;
+            }
+
+            if (suspendBtn) suspendBtn.disabled = false;
 
             let selectedCountryName = "";
 
@@ -1402,8 +1240,18 @@
         // Global keyboard listener for left/right arrows to cycle country parts, and hjkl/io for pan/zoom
         document.addEventListener('keydown', function(e) {
             if (e.key === 'Escape') {
-                closeExcludedModal();
+                closeCountriesModal();
             }
+
+            // 'x' shortcut to suspend target country
+            if (e.key.toLowerCase() === 'x') {
+                const modalSearchInput = document.getElementById('modalSearchInput');
+                if (document.activeElement !== guessInput && document.activeElement !== modalSearchInput) {
+                    e.preventDefault();
+                    suspendCurrentCountry();
+                }
+            }
+
             if (isAnswered) {
                 const panStep = 20 / currentScale;
                 const key = e.key.toLowerCase();
@@ -1450,105 +1298,137 @@
             }
         });
 
-        // Filter-related helper functions
-        function getExcludedCountries() {
-            if (allFeatures.length === 0) return [];
-            return allFeatures.filter(f => f.edgeCount < gameState.edgeThreshold);
-        }
-
+        // Active feature retrieval
         function getActiveFeatures() {
-            if (!gameState.filterLargeOnly) {
-                return allFeatures;
-            }
-            return allFeatures.filter(f => f.edgeCount >= gameState.edgeThreshold);
+            return allFeatures.filter(f => !gameState.suspended[f.properties.name]);
         }
 
-        function toggleFilter() {
-            const filterCheckbox = document.getElementById('filterLargeOnly');
-            gameState.filterLargeOnly = filterCheckbox.checked;
-            
-            const thresholdControl = document.getElementById('thresholdControl');
-            if (thresholdControl) {
-                thresholdControl.style.display = gameState.filterLargeOnly ? 'flex' : 'none';
-            }
-            
+        function suspendCurrentCountry() {
+            if (!targetCountryName) return;
+            gameState.suspended[targetCountryName] = true;
             saveState();
-            updateExcludedUI();
-            updateStatsUI();
             
-            // Check if current country is excluded under new settings
-            const activeFeatures = getActiveFeatures();
-            const isCurrentActive = activeFeatures.some(f => f.properties.name === targetCountryName);
-            if (!isCurrentActive) {
-                pickRandomCountry();
-            }
+            // Show brief feedback
+            const name = targetCountryName;
+            messageEl.textContent = `Suspended ${name}`;
+            messageEl.className = "message-incorrect";
+            
+            pickRandomCountry();
+            updateManageCountriesBtn();
         }
 
-        function updateThreshold(val) {
-            gameState.edgeThreshold = parseInt(val);
-            document.getElementById('thresholdValue').textContent = val;
+        // Manage Countries Modal implementation
+        function openCountriesModal() {
+            const modal = document.getElementById('countriesModal');
+            if (!modal) return;
             
-            saveState();
-            updateExcludedUI();
-            updateStatsUI();
-            
-            // Check if current country is excluded under new settings
-            const activeFeatures = getActiveFeatures();
-            const isCurrentActive = activeFeatures.some(f => f.properties.name === targetCountryName);
-            if (!isCurrentActive) {
-                pickRandomCountry();
-            }
-        }
-
-        function updateExcludedUI() {
-            const excluded = getExcludedCountries();
-            const btn = document.getElementById('viewExcludedBtn');
-            if (btn) {
-                btn.textContent = `view excluded (${excluded.length})`;
-            }
-        }
-
-        function openExcludedModal() {
-            const modal = document.getElementById('excludedModal');
-            const body = document.getElementById('excludedModalBody');
-            if (!modal || !body) return;
-
-            const excluded = getExcludedCountries();
-            // Sort alphabetically by name
-            excluded.sort((a, b) => a.properties.name.localeCompare(b.properties.name));
-
-            body.innerHTML = '';
-            if (excluded.length === 0) {
-                body.innerHTML = '<p style="text-align: center; color: var(--muted); margin: 20px 0;">No countries are currently excluded.</p>';
-            } else {
-                const ul = document.createElement('ul');
-                ul.className = 'excluded-list';
-                excluded.forEach(c => {
-                    const li = document.createElement('li');
-                    li.className = 'excluded-item';
-                    
-                    const nameSpan = document.createElement('span');
-                    nameSpan.className = 'excluded-name';
-                    nameSpan.textContent = c.properties.name;
-                    
-                    const countSpan = document.createElement('span');
-                    countSpan.className = 'excluded-count';
-                    countSpan.textContent = `${c.edgeCount} edges`;
-                    
-                    li.appendChild(nameSpan);
-                    li.appendChild(countSpan);
-                    ul.appendChild(li);
-                });
-                body.appendChild(ul);
-            }
-
             modal.style.display = 'flex';
+            
+            const searchInput = document.getElementById('modalSearchInput');
+            if (searchInput) {
+                searchInput.value = '';
+                searchInput.focus();
+                if (!searchInput.dataset.hasListener) {
+                    searchInput.addEventListener('input', () => renderCountriesList());
+                    searchInput.dataset.hasListener = 'true';
+                }
+            }
+            
+            renderCountriesList();
         }
 
-        function closeExcludedModal() {
-            const modal = document.getElementById('excludedModal');
+        function closeCountriesModal() {
+            const modal = document.getElementById('countriesModal');
             if (modal) {
                 modal.style.display = 'none';
+            }
+            guessInput.focus();
+        }
+
+        function renderCountriesList() {
+            const body = document.getElementById('countriesModalBody');
+            const searchInput = document.getElementById('modalSearchInput');
+            if (!body) return;
+
+            const query = searchInput ? searchInput.value.trim().toLowerCase() : '';
+            
+            let listContainer = document.getElementById('modalCountriesList');
+            if (!listContainer) {
+                listContainer = document.createElement('div');
+                listContainer.id = 'modalCountriesList';
+                listContainer.style.display = 'flex';
+                listContainer.style.flexDirection = 'column';
+                listContainer.style.gap = '4px';
+                body.appendChild(listContainer);
+            }
+            
+            listContainer.innerHTML = '';
+            
+            const sortedCountries = [...allFeatures].sort((a, b) => 
+                a.properties.name.localeCompare(b.properties.name)
+            );
+            
+            const filtered = sortedCountries.filter(c => 
+                c.properties.name.toLowerCase().includes(query)
+            );
+            
+            if (filtered.length === 0) {
+                listContainer.innerHTML = '<p style="text-align: center; color: var(--muted); margin: 20px 0;">No countries match your search.</p>';
+                return;
+            }
+            
+            filtered.forEach(c => {
+                const name = c.properties.name;
+                const isSuspended = !!gameState.suspended[name];
+                
+                const item = document.createElement('div');
+                item.className = 'country-list-item';
+                
+                const nameSpan = document.createElement('span');
+                nameSpan.className = 'country-name';
+                nameSpan.textContent = name;
+                
+                const btn = document.createElement('button');
+                btn.className = isSuspended ? 'country-status-btn btn-status-suspended' : 'country-status-btn btn-status-active';
+                btn.textContent = isSuspended ? 'Suspended' : 'Active';
+                
+                btn.onclick = () => {
+                    toggleCountrySuspension(name, btn);
+                };
+                
+                item.appendChild(nameSpan);
+                item.appendChild(btn);
+                listContainer.appendChild(item);
+            });
+        }
+
+        function toggleCountrySuspension(name, btn) {
+            const isCurrentlySuspended = !!gameState.suspended[name];
+            if (isCurrentlySuspended) {
+                delete gameState.suspended[name];
+                btn.textContent = 'Active';
+                btn.className = 'country-status-btn btn-status-active';
+            } else {
+                gameState.suspended[name] = true;
+                btn.textContent = 'Suspended';
+                btn.className = 'country-status-btn btn-status-suspended';
+            }
+            saveState();
+            updateManageCountriesBtn();
+            updateStatsUI();
+            
+            const activeFeatures = getActiveFeatures();
+            const isCurrentActive = activeFeatures.some(f => f.properties.name === targetCountryName);
+            if (!isCurrentActive) {
+                pickRandomCountry();
+            }
+        }
+
+        function updateManageCountriesBtn() {
+            const btn = document.getElementById('manageCountriesBtn');
+            if (btn) {
+                const suspendedCount = Object.keys(gameState.suspended).filter(k => gameState.suspended[k]).length;
+                btn.textContent = `Manage Countries (${suspendedCount} suspended)`;
             }
         }
 
