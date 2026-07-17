@@ -95,19 +95,22 @@
             width: 100%;
         }
 
-        input[type="text"] {
+        input[type="text"], select {
             padding: 12px 16px;
             font-size: 1rem;
             font-family: inherit;
             border: 1px solid var(--border);
             border-radius: 8px;
-            width: 100%;
             background-color: var(--bg);
             color: var(--text);
             transition: all 0.15s ease;
         }
 
-        input[type="text"]:focus {
+        input[type="text"] {
+            width: 100%;
+        }
+
+        input[type="text"]:focus, select:focus {
             outline: none;
             border-color: var(--text);
             box-shadow: var(--focus-shadow);
@@ -481,8 +484,12 @@
                     <button class="modal-close" onclick="closeCountriesModal()">&times;</button>
                 </div>
                 <div class="modal-body" style="display: flex; flex-direction: column; overflow-y: hidden; gap: 12px;">
-                    <div style="flex-shrink: 0;">
-                        <input type="text" id="modalSearchInput" placeholder="Search countries..." autocomplete="off">
+                    <div style="flex-shrink: 0; display: flex; gap: 8px;">
+                        <input type="text" id="modalSearchInput" placeholder="Search countries..." autocomplete="off" style="flex: 1;">
+                        <select id="modalSortSelect" style="width: auto; min-width: 160px; cursor: pointer;">
+                            <option value="name">Sort: Name (A-Z)</option>
+                            <option value="suspended">Sort: Suspended First</option>
+                        </select>
                     </div>
                     <div id="countriesModalBody" style="overflow-y: auto; flex: 1;">
                         <!-- Dynamic list will be rendered here -->
@@ -815,7 +822,13 @@
 
         // Draw outline of the target country on canvas (only target country, no context)
         function drawCountryOutline() {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            const isDark = document.body.classList.contains('dark-mode');
+            if (isAnswered) {
+                ctx.fillStyle = isDark ? '#0a1120' : '#e2eaf4';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+            } else {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+            }
 
             const targetFeature = allFeatures.find(f => f.properties.name === targetCountryName);
             if (!targetFeature || !targetFeature.bbox || !targetFeature.parts) return;
@@ -849,12 +862,19 @@
             const centerY = (minY + maxY) / 2 + userPanY;
             currentScale = scale;
 
-            const isDark = document.body.classList.contains('dark-mode');
             const strokeColor = isDark ? '#e2e8f0' : '#222222';
-            const primaryFill = isDark ? 'rgba(226, 232, 240, 0.12)' : 'rgba(34, 34, 34, 0.08)';
-            const zoomFill = isDark ? 'rgba(226, 232, 240, 0.25)' : 'rgba(34, 34, 34, 0.15)';
-            const fadeStroke = isDark ? 'rgba(148, 163, 184, 0.3)' : 'rgba(111, 111, 111, 0.25)';
-            const fadeFill = isDark ? 'rgba(148, 163, 184, 0.05)' : 'rgba(111, 111, 111, 0.04)';
+            const primaryFill = isAnswered
+                ? (isDark ? 'rgba(226, 232, 240, 0.22)' : 'rgba(34, 34, 34, 0.14)')
+                : (isDark ? 'rgba(226, 232, 240, 0.12)' : 'rgba(34, 34, 34, 0.08)');
+            const zoomFill = isAnswered
+                ? (isDark ? 'rgba(226, 232, 240, 0.35)' : 'rgba(34, 34, 34, 0.22)')
+                : (isDark ? 'rgba(226, 232, 240, 0.25)' : 'rgba(34, 34, 34, 0.15)');
+            const fadeStroke = isAnswered
+                ? (isDark ? 'rgba(148, 163, 184, 0.4)' : 'rgba(111, 111, 111, 0.35)')
+                : (isDark ? 'rgba(148, 163, 184, 0.3)' : 'rgba(111, 111, 111, 0.25)');
+            const fadeFill = isAnswered
+                ? (isDark ? 'rgba(148, 163, 184, 0.12)' : 'rgba(111, 111, 111, 0.08)')
+                : (isDark ? 'rgba(148, 163, 184, 0.05)' : 'rgba(111, 111, 111, 0.04)');
 
             // Draw neighboring countries first during answer reveal
             if (isAnswered) {
@@ -1333,6 +1353,15 @@
                     searchInput.dataset.hasListener = 'true';
                 }
             }
+
+            const sortSelect = document.getElementById('modalSortSelect');
+            if (sortSelect) {
+                sortSelect.value = 'name';
+                if (!sortSelect.dataset.hasListener) {
+                    sortSelect.addEventListener('change', () => renderCountriesList());
+                    sortSelect.dataset.hasListener = 'true';
+                }
+            }
             
             renderCountriesList();
         }
@@ -1364,9 +1393,18 @@
             
             listContainer.innerHTML = '';
             
-            const sortedCountries = [...allFeatures].sort((a, b) => 
-                a.properties.name.localeCompare(b.properties.name)
-            );
+            const sortVal = document.getElementById('modalSortSelect')?.value || 'name';
+            
+            const sortedCountries = [...allFeatures].sort((a, b) => {
+                if (sortVal === 'suspended') {
+                    const aSusp = !!gameState.suspended[a.properties.name];
+                    const bSusp = !!gameState.suspended[b.properties.name];
+                    if (aSusp !== bSusp) {
+                        return aSusp ? -1 : 1; // Suspended first
+                    }
+                }
+                return a.properties.name.localeCompare(b.properties.name);
+            });
             
             const filtered = sortedCountries.filter(c => 
                 c.properties.name.toLowerCase().includes(query)
