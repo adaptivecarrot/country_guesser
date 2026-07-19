@@ -550,6 +550,7 @@
             weights: {}, // countryName -> weight
             reviewQueue: [], // countryNames that need review soon
             deck: [], // shuffled deck of remaining active country names
+            drawnInCycle: [], // active country names drawn in the current deck cycle
             totalTimeSpent: 0, // total time spent in the app in seconds
             selectionMode: 'deck', // 'deck' for shuffled queue, 'weighted' for old adaptive weighted selection
             stats: {
@@ -713,6 +714,7 @@
                     if (!gameState.reviewQueue) gameState.reviewQueue = [];
                     if (!gameState.suspended) gameState.suspended = {};
                     if (!gameState.deck) gameState.deck = [];
+                    if (!gameState.drawnInCycle) gameState.drawnInCycle = [];
                     if (gameState.totalTimeSpent === undefined) gameState.totalTimeSpent = 0;
                     if (!gameState.selectionMode) gameState.selectionMode = 'deck';
                 } catch (e) {
@@ -721,6 +723,7 @@
             } else {
                 gameState.suspended = {};
                 gameState.deck = [];
+                gameState.drawnInCycle = [];
                 gameState.totalTimeSpent = 0;
                 gameState.selectionMode = 'deck';
             }
@@ -757,30 +760,38 @@
             if (!gameState.deck) {
                 gameState.deck = [];
             }
+            if (!gameState.drawnInCycle) {
+                gameState.drawnInCycle = [];
+            }
             
             const activeFeatures = getActiveFeatures();
             const activeNames = activeFeatures.map(f => f.properties.name);
             
-            // 1. Remove any suspended/invalid countries from the deck
+            // 1. Remove any suspended/invalid countries from the deck and drawn list
             gameState.deck = gameState.deck.filter(name => activeNames.includes(name));
+            gameState.drawnInCycle = gameState.drawnInCycle.filter(name => activeNames.includes(name));
             
-            // 2. If deck is empty, populate it with all active names and shuffle
+            // 2. If deck is empty, populate it with all active names and shuffle, resetting drawn list
             if (gameState.deck.length === 0) {
                 if (activeNames.length === 0) return null;
                 gameState.deck = [...activeNames];
+                gameState.drawnInCycle = [];
                 shuffleArray(gameState.deck);
             } else {
-                // 3. Add any active countries that are missing from the deck (e.g. newly unsuspended)
+                // 3. Add any active countries that are missing from both the deck and drawn list (e.g. newly unsuspended)
                 activeNames.forEach(name => {
-                    if (!gameState.deck.includes(name)) {
+                    if (!gameState.deck.includes(name) && !gameState.drawnInCycle.includes(name)) {
                         const randPos = Math.floor(Math.random() * (gameState.deck.length + 1));
                         gameState.deck.splice(randPos, 0, name);
                     }
                 });
             }
             
-            // 4. Draw from the deck
+            // 4. Draw from the deck and record it as drawn
             const selected = gameState.deck.shift();
+            if (selected) {
+                gameState.drawnInCycle.push(selected);
+            }
             saveState();
             return selected;
         }
@@ -799,6 +810,7 @@
                     },
                     suspended: {},
                     deck: [],
+                    drawnInCycle: [],
                     totalTimeSpent: 0,
                     selectionMode: 'deck'
                 };
