@@ -263,8 +263,18 @@
 
         .footer-actions {
             display: flex;
-            justify-content: center;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
             margin-top: 1rem;
+        }
+
+        .footer-row {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            width: 100%;
+            flex-wrap: wrap;
         }
 
         .btn-reset {
@@ -469,9 +479,15 @@
                 </div>
 
                 <div class="footer-actions">
-                    <button id="themeToggleBtn" class="btn-reset" onclick="toggleTheme()" style="margin-right: 12px;">Dark Mode</button>
-                    <button id="manageCountriesBtn" class="btn-reset" onclick="openCountriesModal()" style="margin-right: 12px;">Manage Countries (0 suspended)</button>
-                    <button class="btn-reset" onclick="resetState()">Reset Progress</button>
+                    <div class="footer-row">
+                        <button id="themeToggleBtn" class="btn-reset" onclick="toggleTheme()">Dark Mode</button>
+                        <button id="modeToggleBtn" class="btn-reset" onclick="toggleSelectionMode()">Mode: Shuffled Deck</button>
+                        <button id="timeStatsBtn" class="btn-reset" onclick="toggleTimeStats()">View Time Spent</button>
+                    </div>
+                    <div class="footer-row">
+                        <button id="manageCountriesBtn" class="btn-reset" onclick="openCountriesModal()">Manage Countries (0 suspended)</button>
+                        <button class="btn-reset" onclick="resetState()">Reset Progress</button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -533,6 +549,9 @@
         let gameState = {
             weights: {}, // countryName -> weight
             reviewQueue: [], // countryNames that need review soon
+            deck: [], // shuffled deck of remaining active country names
+            totalTimeSpent: 0, // total time spent in the app in seconds
+            selectionMode: 'deck', // 'deck' for shuffled queue, 'weighted' for old adaptive weighted selection
             stats: {
                 correct: 0,
                 total: 0,
@@ -660,6 +679,9 @@
                 // Update manage countries button count
                 updateManageCountriesBtn();
 
+                // Update selection mode toggle button text
+                updateModeBtnUI();
+
                 // Enable inputs
                 guessInput.disabled = false;
                 guessBtn.disabled = false;
@@ -676,6 +698,11 @@
         }
 
         // Load state from localStorage
+        let sessionStartTime = Date.now();
+        let showTimeSpentActive = false;
+        let timeSpentInterval = null;
+
+        // Load state from localStorage
         function loadState() {
             const saved = localStorage.getItem('country_guesser_state');
             if (saved) {
@@ -685,17 +712,77 @@
                     if (!gameState.weights) gameState.weights = {};
                     if (!gameState.reviewQueue) gameState.reviewQueue = [];
                     if (!gameState.suspended) gameState.suspended = {};
+                    if (!gameState.deck) gameState.deck = [];
+                    if (gameState.totalTimeSpent === undefined) gameState.totalTimeSpent = 0;
+                    if (!gameState.selectionMode) gameState.selectionMode = 'deck';
                 } catch (e) {
                     console.error("Failed to parse game state, using defaults", e);
                 }
             } else {
                 gameState.suspended = {};
+                gameState.deck = [];
+                gameState.totalTimeSpent = 0;
+                gameState.selectionMode = 'deck';
             }
         }
 
         // Save state to localStorage
         function saveState() {
+            const now = Date.now();
+            const elapsedSeconds = Math.floor((now - sessionStartTime) / 1000);
+            if (elapsedSeconds > 0) {
+                gameState.totalTimeSpent = (gameState.totalTimeSpent || 0) + elapsedSeconds;
+                sessionStartTime += elapsedSeconds * 1000;
+            }
             localStorage.setItem('country_guesser_state', JSON.stringify(gameState));
+        }
+
+        // Auto-save time spent periodically
+        setInterval(saveState, 10000);
+
+        // Bind unload events to ensure time spent is saved
+        window.addEventListener('beforeunload', saveState);
+        window.addEventListener('pagehide', saveState);
+
+        // Shuffle an array in place using Fisher-Yates
+        function shuffleArray(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+        }
+
+        // Get the next country from the deck, automatically handles deck refills and suspensions
+        function getNextFromDeck() {
+            if (!gameState.deck) {
+                gameState.deck = [];
+            }
+            
+            const activeFeatures = getActiveFeatures();
+            const activeNames = activeFeatures.map(f => f.properties.name);
+            
+            // 1. Remove any suspended/invalid countries from the deck
+            gameState.deck = gameState.deck.filter(name => activeNames.includes(name));
+            
+            // 2. If deck is empty, populate it with all active names and shuffle
+            if (gameState.deck.length === 0) {
+                if (activeNames.length === 0) return null;
+                gameState.deck = [...activeNames];
+                shuffleArray(gameState.deck);
+            } else {
+                // 3. Add any active countries that are missing from the deck (e.g. newly unsuspended)
+                activeNames.forEach(name => {
+                    if (!gameState.deck.includes(name)) {
+                        const randPos = Math.floor(Math.random() * (gameState.deck.length + 1));
+                        gameState.deck.splice(randPos, 0, name);
+                    }
+                });
+            }
+            
+            // 4. Draw from the deck
+            const selected = gameState.deck.shift();
+            saveState();
+            return selected;
         }
 
         // Reset all stats and weights
@@ -710,13 +797,76 @@
                         streak: 0,
                         bestStreak: 0
                     },
-                    suspended: {}
+                    suspended: {},
+                    deck: [],
+                    totalTimeSpent: 0,
+                    selectionMode: 'deck'
                 };
+                sessionStartTime = Date.now();
                 saveState();
 
                 updateManageCountriesBtn();
                 updateStatsUI();
+                updateModeBtnUI();
+                if (showTimeSpentActive) {
+                    updateTimeStatsUI();
+                }
                 pickRandomCountry();
+            }
+        }
+
+        // Toggle time tracking display
+        function toggleTimeStats() {
+            const btn = document.getElementById('timeStatsBtn');
+            showTimeSpentActive = !showTimeSpentActive;
+            
+            if (showTimeSpentActive) {
+                updateTimeStatsUI();
+                timeSpentInterval = setInterval(updateTimeStatsUI, 1000);
+            } else {
+                if (timeSpentInterval) {
+                    clearInterval(timeSpentInterval);
+                    timeSpentInterval = null;
+                }
+                btn.textContent = "View Time Spent";
+            }
+            guessInput.focus();
+        }
+
+        // Update the button text to show elapsed time formatted
+        function updateTimeStatsUI() {
+            const btn = document.getElementById('timeStatsBtn');
+            const totalSeconds = (gameState.totalTimeSpent || 0) + Math.floor((Date.now() - sessionStartTime) / 1000);
+            
+            const hours = Math.floor(totalSeconds / 3600);
+            const minutes = Math.floor((totalSeconds % 3600) / 60);
+            const seconds = totalSeconds % 60;
+            
+            let timeStr = "";
+            if (hours > 0) {
+                timeStr += `${hours}h `;
+            }
+            if (minutes > 0 || hours > 0) {
+                timeStr += `${minutes}m `;
+            }
+            timeStr += `${seconds}s`;
+            
+            btn.textContent = `Time Spent: ${timeStr}`;
+        }
+
+        // Toggle card selection mode between shuffled deck and weighted random
+        function toggleSelectionMode() {
+            gameState.selectionMode = gameState.selectionMode === 'weighted' ? 'deck' : 'weighted';
+            saveState();
+            updateModeBtnUI();
+            guessInput.focus();
+        }
+
+        // Update mode toggle button text
+        function updateModeBtnUI() {
+            const btn = document.getElementById('modeToggleBtn');
+            if (btn) {
+                btn.textContent = gameState.selectionMode === 'weighted' ? "Mode: Weighted Random" : "Mode: Shuffled Deck";
             }
         }
 
@@ -762,37 +912,43 @@
 
             let selectedCountryName = "";
 
-            // Check if we should pull from the review queue (45% probability if it's not empty)
+            // Check if we should pull from the review queue (35% probability for deck mode, 45% for weighted if not empty)
             const activeReviewQueue = gameState.reviewQueue.filter(name => 
                 activeFeatures.some(f => f.properties.name === name)
             );
-            const shouldReview = activeReviewQueue.length > 0 && Math.random() < 0.45;
+            const reviewProbability = gameState.selectionMode === 'weighted' ? 0.45 : 0.35;
+            const shouldReview = activeReviewQueue.length > 0 && Math.random() < reviewProbability;
 
             if (shouldReview) {
                 // Pick a country from the review queue
                 const randomIndex = Math.floor(Math.random() * activeReviewQueue.length);
                 selectedCountryName = activeReviewQueue[randomIndex];
             } else {
-                // Weighted random selection from the general pool
-                let totalWeight = 0;
-                const countryWeights = activeFeatures.map(f => {
-                    const name = f.properties.name;
-                    // Default weight is 100 if not set
-                    const w = gameState.weights[name] !== undefined ? gameState.weights[name] : 100;
-                    totalWeight += w;
-                    return { name, weight: w };
-                });
+                if (gameState.selectionMode === 'weighted') {
+                    // Weighted random selection from the general pool
+                    let totalWeight = 0;
+                    const countryWeights = activeFeatures.map(f => {
+                        const name = f.properties.name;
+                        // Default weight is 100 if not set
+                        const w = gameState.weights[name] !== undefined ? gameState.weights[name] : 100;
+                        totalWeight += w;
+                        return { name, weight: w };
+                    });
 
-                let r = Math.random() * totalWeight;
-                for (let i = 0; i < countryWeights.length; i++) {
-                    r -= countryWeights[i].weight;
-                    if (r <= 0) {
-                        selectedCountryName = countryWeights[i].name;
-                        break;
+                    let r = Math.random() * totalWeight;
+                    for (let i = 0; i < countryWeights.length; i++) {
+                        r -= countryWeights[i].weight;
+                        if (r <= 0) {
+                            selectedCountryName = countryWeights[i].name;
+                            break;
+                        }
                     }
-                }
-                if (!selectedCountryName && countryWeights.length > 0) {
-                    selectedCountryName = countryWeights[countryWeights.length - 1].name;
+                    if (!selectedCountryName && countryWeights.length > 0) {
+                        selectedCountryName = countryWeights[countryWeights.length - 1].name;
+                    }
+                } else {
+                    // Draw from the shuffled deck
+                    selectedCountryName = getNextFromDeck();
                 }
             }
 
@@ -1107,6 +1263,10 @@
                     contains.push(name);
                 }
             });
+
+            // Sort both groups alphabetically
+            startsWith.sort((a, b) => a.localeCompare(b));
+            contains.sort((a, b) => a.localeCompare(b));
 
             // Combine and limit suggestions to 7 items
             filteredCountries = [...startsWith, ...contains].slice(0, 7);
