@@ -1128,6 +1128,46 @@
             guessInput.focus();
         }
 
+        // Helper to check if a query string is a subsequence of a target string in relative order
+        function isSubsequence(query, target) {
+            query = query.toLowerCase();
+            target = target.toLowerCase();
+            let qIdx = 0;
+            let tIdx = 0;
+            while (qIdx < query.length && tIdx < target.length) {
+                if (query[qIdx] === target[tIdx]) {
+                    qIdx++;
+                }
+                tIdx++;
+            }
+            return qIdx === query.length;
+        }
+
+        // Check if user's typed guess is a valid partial, acronym, or exact match for target
+        function isMatch(guess, target) {
+            const g = guess.trim().toLowerCase();
+            const t = target.trim().toLowerCase();
+            if (g === t) return true;
+            
+            // 1. Check initials / acronym matching (e.g., "usa" -> "United States of America")
+            const targetWords = t.split(/[\s-]+/).filter(w => w.length > 0);
+            const initials = targetWords.map(w => w[0]).join('');
+            if (g === initials) return true;
+            
+            const majorInitials = targetWords
+                .filter(w => !['of', 'the', 'and', 'de', 'la', 'da', 'di'].includes(w))
+                .map(w => w[0])
+                .join('');
+            if (g === majorInitials) return true;
+
+            // 2. Check subsequence matching (minimum 3 characters to avoid trivial 1-2 char false positives)
+            if (g.length >= 3 && isSubsequence(g, t)) {
+                return true;
+            }
+
+            return false;
+        }
+
         // Evaluate user's guess and update learning weights
         function checkGuess() {
             const guess = guessInput.value.trim();
@@ -1138,8 +1178,8 @@
                 return;
             }
 
-            // Case-insensitive match check
-            const isCorrect = guess.toLowerCase() === targetCountryName.toLowerCase();
+            // Case-insensitive match check supporting partial, acronym, and subsequence matches
+            const isCorrect = isMatch(guess, targetCountryName);
 
             // Init weight if not present
             if (gameState.weights[targetCountryName] === undefined) {
@@ -1249,27 +1289,48 @@
                 return;
             }
 
-            // Group by starts-with vs contains for better relevancy sorting
+            const exactMatches = [];
             const startsWith = [];
+            const acronymMatches = [];
             const contains = [];
+            const subsequenceMatches = [];
             
             const activeFeatures = getActiveFeatures();
             activeFeatures.forEach(feature => {
                 const name = feature.properties.name;
-                const index = name.toLowerCase().indexOf(query);
-                if (index === 0) {
+                const nameLower = name.toLowerCase();
+                
+                if (nameLower === query) {
+                    exactMatches.push(name);
+                } else if (nameLower.startsWith(query)) {
                     startsWith.push(name);
-                } else if (index > 0) {
-                    contains.push(name);
+                } else {
+                    // Check initials / acronyms
+                    const targetWords = nameLower.split(/[\s-]+/).filter(w => w.length > 0);
+                    const initials = targetWords.map(w => w[0]).join('');
+                    const majorInitials = targetWords
+                        .filter(w => !['of', 'the', 'and', 'de', 'la', 'da', 'di'].includes(w))
+                        .map(w => w[0])
+                        .join('');
+                    if (query === initials || query === majorInitials) {
+                        acronymMatches.push(name);
+                    } else if (nameLower.includes(query)) {
+                        contains.push(name);
+                    } else if (query.length >= 3 && isSubsequence(query, nameLower)) {
+                        subsequenceMatches.push(name);
+                    }
                 }
             });
 
-            // Sort both groups alphabetically
+            // Sort all groups alphabetically
+            exactMatches.sort((a, b) => a.localeCompare(b));
             startsWith.sort((a, b) => a.localeCompare(b));
+            acronymMatches.sort((a, b) => a.localeCompare(b));
             contains.sort((a, b) => a.localeCompare(b));
+            subsequenceMatches.sort((a, b) => a.localeCompare(b));
 
             // Combine and limit suggestions to 7 items
-            filteredCountries = [...startsWith, ...contains].slice(0, 7);
+            filteredCountries = [...exactMatches, ...startsWith, ...acronymMatches, ...contains, ...subsequenceMatches].slice(0, 7);
 
             if (filteredCountries.length === 0) {
                 dropdown.style.display = 'none';
@@ -1287,11 +1348,26 @@
                 
                 // Highlight matches in search results
                 const matchIndex = country.toLowerCase().indexOf(query);
-                const before = country.slice(0, matchIndex);
-                const match = country.slice(matchIndex, matchIndex + query.length);
-                const after = country.slice(matchIndex + query.length);
-                
-                item.innerHTML = `${escapeHTML(before)}<strong>${escapeHTML(match)}</strong>${escapeHTML(after)}`;
+                if (matchIndex !== -1) {
+                    const before = country.slice(0, matchIndex);
+                    const match = country.slice(matchIndex, matchIndex + query.length);
+                    const after = country.slice(matchIndex + query.length);
+                    item.innerHTML = `${escapeHTML(before)}<strong>${escapeHTML(match)}</strong>${escapeHTML(after)}`;
+                } else {
+                    // Subsequence/fuzzy match sequential highlighting
+                    let html = "";
+                    let qIdx = 0;
+                    for (let cIdx = 0; cIdx < country.length; cIdx++) {
+                        const char = country[cIdx];
+                        if (qIdx < query.length && char.toLowerCase() === query[qIdx].toLowerCase()) {
+                            html += `<strong>${escapeHTML(char)}</strong>`;
+                            qIdx++;
+                        } else {
+                            html += escapeHTML(char);
+                        }
+                    }
+                    item.innerHTML = html;
+                }
                 
                 item.addEventListener('click', () => {
                     selectCountry(country);
