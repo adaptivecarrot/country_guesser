@@ -487,6 +487,7 @@
                     <div class="footer-row">
                         <button id="manageCountriesBtn" class="btn-reset" onclick="openCountriesModal()">Manage Countries (0 suspended)</button>
                         <button class="btn-reset" onclick="resetState()">Reset Progress</button>
+                        <button class="btn-reset" onclick="location.href='country_guess_globe.html'">Play Globe Mode</button>
                     </div>
                 </div>
             </div>
@@ -715,6 +716,9 @@
                     if (!gameState.suspended) gameState.suspended = {};
                     if (!gameState.deck) gameState.deck = [];
                     if (!gameState.drawnInCycle) gameState.drawnInCycle = [];
+                    if (!gameState.statsGlobe) gameState.statsGlobe = { correct: 0, total: 0, streak: 0, bestStreak: 0 };
+                    if (!gameState.deckGlobe) gameState.deckGlobe = [];
+                    if (!gameState.drawnInCycleGlobe) gameState.drawnInCycleGlobe = [];
                     if (gameState.totalTimeSpent === undefined) gameState.totalTimeSpent = 0;
                     if (!gameState.selectionMode) gameState.selectionMode = 'deck';
                 } catch (e) {
@@ -808,9 +812,17 @@
                         streak: 0,
                         bestStreak: 0
                     },
+                    statsGlobe: {
+                        correct: 0,
+                        total: 0,
+                        streak: 0,
+                        bestStreak: 0
+                    },
                     suspended: {},
                     deck: [],
                     drawnInCycle: [],
+                    deckGlobe: [],
+                    drawnInCycleGlobe: [],
                     totalTimeSpent: 0,
                     selectionMode: 'deck'
                 };

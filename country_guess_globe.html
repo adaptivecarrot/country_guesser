@@ -1,0 +1,1791 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Guess the Country - Globe Mode</title>
+    <style>
+        :root {
+            --bg: #ffffff;
+            --text: #222222;
+            --muted: #6f6f6f;
+            --accent: #e9e9e9;
+            --border: #dddddd;
+            --primary: #222222;
+            --primary-hover: #000000;
+            --success: #10b981;
+            --success-hover: #059669;
+            --error: #dc2626;
+            --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+            --focus-shadow: 0 0 0 3px rgba(34, 34, 34, 0.08);
+            --correct-text: #065f46;
+            --incorrect-text: #991b1b;
+        }
+
+        body.dark-mode {
+            --bg: #000000;
+            --text: #e2e8f0;
+            --muted: #94a3b8;
+            --accent: #1e293b;
+            --border: #2d3748;
+            --primary: #ffffff;
+            --primary-hover: #e2e8f0;
+            --focus-shadow: 0 0 0 3px rgba(248, 250, 252, 0.15);
+            --correct-text: #34d399;
+            --incorrect-text: #f87171;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            background: var(--bg);
+            color: var(--text);
+            font-family: system-ui, -apple-system, sans-serif;
+            padding: 2.5rem 1.5rem;
+            display: flex;
+            justify-content: center;
+        }
+
+        main {
+            max-width: 720px;
+            width: 100%;
+            margin: 0 auto;
+        }
+
+        .game-container {
+            display: flex;
+            flex-direction: column;
+            gap: 2rem;
+            align-items: center;
+        }
+
+        .canvas-container {
+            width: 100%;
+            display: flex;
+            justify-content: center;
+        }
+
+        canvas {
+            background-color: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            max-width: 100%;
+            height: auto;
+            aspect-ratio: 1 / 1;
+            cursor: default;
+        }
+
+        .controls-container {
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        #promptContainer {
+            font-size: 1.25rem;
+            font-weight: 600;
+            text-align: center;
+            padding: 14px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            background: var(--accent);
+            color: var(--muted);
+        }
+
+        #targetCountryDisplay {
+            color: var(--text);
+            font-weight: 800;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 12px;
+            width: 100%;
+        }
+
+        button {
+            flex: 1;
+            padding: 12px 20px;
+            font-size: 1rem;
+            font-family: inherit;
+            font-weight: 400;
+            color: var(--text);
+            background-color: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            display: inline-flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        button:active {
+            transform: scale(0.98);
+        }
+
+        .btn-primary {
+            background-color: var(--text);
+            color: var(--bg);
+            border-color: var(--text);
+        }
+        .btn-primary:hover {
+            background-color: var(--primary-hover);
+            border-color: var(--primary-hover);
+        }
+        .btn-primary:disabled {
+            background-color: var(--accent);
+            border-color: var(--border);
+            color: var(--muted);
+            cursor: not-allowed;
+        }
+
+        .btn-secondary:hover {
+            background-color: var(--accent);
+        }
+        .btn-secondary:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        #message {
+            font-size: 1rem;
+            font-weight: 400;
+            margin-top: 0.5rem;
+            min-height: 24px;
+            padding: 12px;
+            border-radius: 8px;
+            text-align: center;
+            transition: all 0.15s ease;
+            border: 1px solid transparent;
+        }
+
+        .message-correct {
+            background-color: rgba(16, 185, 129, 0.04);
+            color: var(--correct-text);
+            border: 1px solid rgba(16, 185, 129, 0.15);
+        }
+
+        .message-incorrect {
+            background-color: rgba(220, 38, 38, 0.04);
+            color: var(--incorrect-text);
+            border: 1px solid rgba(220, 38, 38, 0.15);
+        }
+
+        /* Stats Grid */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+            width: 100%;
+        }
+
+        .stat-card {
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 14px 12px;
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: var(--text);
+            margin-bottom: 2px;
+        }
+
+        .stat-label {
+            font-size: 0.8rem;
+            color: var(--muted);
+            text-transform: lowercase;
+        }
+
+        .footer-actions {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+            margin-top: 1rem;
+        }
+
+        .footer-row {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            width: 100%;
+            flex-wrap: wrap;
+        }
+
+        .btn-reset {
+            background: transparent;
+            color: var(--muted);
+            border: 1px solid var(--border);
+            font-size: 0.85rem;
+            padding: 6px 14px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            width: auto;
+            flex: none;
+        }
+
+        .btn-reset:hover {
+            background: rgba(220, 38, 38, 0.05);
+            color: var(--error);
+            border-color: rgba(220, 38, 38, 0.2);
+        }
+
+        /* Country List in Modal */
+        .country-list-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 14px;
+            border-bottom: 1px solid var(--border);
+            font-size: 0.95rem;
+        }
+        .country-list-item:last-child {
+            border-bottom: none;
+        }
+        .country-name {
+            font-weight: 500;
+            color: var(--text);
+        }
+        .country-status-btn {
+            font-size: 0.8rem;
+            padding: 4px 10px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            width: 80px;
+            text-align: center;
+            flex: none;
+        }
+        .btn-status-active {
+            background: transparent;
+            color: var(--muted);
+            border: 1px solid var(--border);
+        }
+        .btn-status-active:hover {
+            background: rgba(220, 38, 38, 0.05);
+            color: var(--error);
+            border-color: rgba(220, 38, 38, 0.2);
+        }
+        .btn-status-suspended {
+            background: rgba(220, 38, 38, 0.1);
+            color: var(--error);
+            border: 1px solid rgba(220, 38, 38, 0.2);
+        }
+        .btn-status-suspended:hover {
+            background: rgba(16, 185, 129, 0.1);
+            color: var(--success);
+            border-color: rgba(16, 185, 129, 0.2);
+        }
+
+        /* Modal Custom Styles */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 2000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.4);
+            backdrop-filter: blur(8px);
+            align-items: center;
+            justify-content: center;
+            padding: 1.5rem;
+            animation: fadeIn 0.2s ease;
+        }
+        .modal-content {
+            background-color: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            max-width: 480px;
+            width: 100%;
+            max-height: 80vh;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.15), 0 10px 10px -5px rgba(0, 0, 0, 0.1);
+            animation: slideUp 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .modal-header {
+            padding: 16px 20px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .modal-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin: 0;
+            color: var(--text);
+        }
+        .modal-close {
+            background: transparent;
+            border: none;
+            color: var(--muted);
+            font-size: 1.5rem;
+            cursor: pointer;
+            padding: 0;
+            line-height: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            transition: all 0.15s ease;
+        }
+        .modal-close:hover {
+            background-color: var(--accent);
+            color: var(--text);
+        }
+        .modal-body {
+            padding: 20px;
+            overflow-y: auto;
+            flex: 1;
+        }
+
+        @keyframes slideUp {
+            from { transform: translateY(24px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+    </style>
+</head>
+<body>
+
+    <main>
+        <div class="game-container">
+            <!-- Prompt Display instead of Input -->
+            <div id="promptContainer" style="width: 100%;">
+                Find: <span id="targetCountryDisplay">Loading...</span>
+            </div>
+
+            <div class="canvas-container">
+                <canvas id="mapCanvas" width="400" height="400"></canvas>
+            </div>
+            
+            <div style="font-size: 0.85rem; color: var(--muted); text-align: center; margin-top: -16px; line-height: 1.4;">
+                Drag / hjkl to rotate & select • Scroll / io to zoom • Click / Enter to guess
+            </div>
+
+            <div class="controls-container">
+                <div class="button-group">
+                    <button id="skipBtn" class="btn-primary" onclick="skipCurrentCountry()" disabled>Skip</button>
+                    <button id="nextBtn" class="btn-primary" onclick="pickRandomCountry()" style="display: none;">Next Country</button>
+                    <button id="hintBtn" class="btn-secondary" onclick="showHint()" disabled>Hint</button>
+                    <button id="suspendBtn" class="btn-secondary" onclick="suspendCurrentCountry()" disabled>Suspend (x)</button>
+                </div>
+
+                <div id="message"></div>
+
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-value" id="statStreak">0</div>
+                        <div class="stat-label">streak</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="statBestStreak">0</div>
+                        <div class="stat-label">best</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="statAccuracy">0%</div>
+                        <div class="stat-label">accuracy</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="statReview">0</div>
+                        <div class="stat-label">needs practice</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="statMastered">0</div>
+                        <div class="stat-label">mastered</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="statTotal">0</div>
+                        <div class="stat-label">total played</div>
+                    </div>
+                </div>
+
+                <div class="footer-actions">
+                    <div class="footer-row">
+                        <button id="themeToggleBtn" class="btn-reset" onclick="toggleTheme()">Dark Mode</button>
+                        <button id="modeToggleBtn" class="btn-reset" onclick="toggleSelectionMode()">Mode: Shuffled Deck</button>
+                        <button id="timeStatsBtn" class="btn-reset" onclick="toggleTimeStats()">View Time Spent</button>
+                    </div>
+                    <div class="footer-row">
+                        <button id="manageCountriesBtn" class="btn-reset" onclick="openCountriesModal()">Manage Countries (0 suspended)</button>
+                        <button class="btn-reset" onclick="resetState()">Reset Progress</button>
+                        <button class="btn-reset" onclick="location.href='country_guess_manual.html'">Play Outline Mode</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Manage Countries Modal -->
+        <div id="countriesModal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3 class="modal-title">Manage Countries</h3>
+                    <button class="modal-close" onclick="closeCountriesModal()">&times;</button>
+                </div>
+                <div class="modal-body" style="display: flex; flex-direction: column; overflow-y: hidden; gap: 12px;">
+                    <div style="flex-shrink: 0; display: flex; gap: 8px;">
+                        <input type="text" id="modalSearchInput" placeholder="Search countries..." autocomplete="off" style="flex: 1; padding: 10px 14px; border: 1px solid var(--border); border-radius: 8px; background: var(--bg); color: var(--text);">
+                        <select id="modalSortSelect" style="width: auto; min-width: 160px; cursor: pointer; padding: 10px 14px; border: 1px solid var(--border); border-radius: 8px; background: var(--bg); color: var(--text);">
+                            <option value="name">Sort: Name (A-Z)</option>
+                            <option value="suspended">Sort: Suspended First</option>
+                        </select>
+                    </div>
+                    <div id="countriesModalBody" style="overflow-y: auto; flex: 1;">
+                        <!-- Dynamic list will be rendered here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        // Apply theme immediately to prevent layout flash
+        (function() {
+            const savedTheme = localStorage.getItem('country_guesser_theme');
+            if (savedTheme === 'dark') {
+                document.body.classList.add('dark-mode');
+            }
+        })();
+
+        let allFeatures = [];
+        let targetCountryName = "";
+        let clickedCountryName = null;
+        let hoveredCountryName = null;
+        let currentSelectionName = null;
+        let isAnswered = false;
+
+        // Projection view settings (Radian values)
+        let R = 180; // dynamic radius for zoom
+        let lambda0 = 0.0; // center longitude
+        let phi0 = 0.0;    // center latitude
+
+        const canvas = document.getElementById('mapCanvas');
+        const ctx = canvas.getContext('2d');
+        const nextBtn = document.getElementById('nextBtn');
+        const skipBtn = document.getElementById('skipBtn');
+        const hintBtn = document.getElementById('hintBtn');
+        const suspendBtn = document.getElementById('suspendBtn');
+        const messageEl = document.getElementById('message');
+
+        // Game state loading/saving
+        let gameState = {
+            weights: {}, 
+            reviewQueue: [],
+            suspended: {},
+            deckGlobe: [], 
+            drawnInCycleGlobe: [], 
+            totalTimeSpent: 0, 
+            selectionMode: 'deck', 
+            statsGlobe: {
+                correct: 0,
+                total: 0,
+                streak: 0,
+                bestStreak: 0
+            }
+        };
+
+        // Draw loading state on canvas
+        function drawLoading() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.fillStyle = '#94a3b8';
+            ctx.font = '16px system-ui';
+            ctx.textAlign = 'center';
+            ctx.fillText('Loading high-resolution map data...', canvas.width/2, canvas.height/2);
+        }
+
+        // Helper to construct a single landmass part bounding box
+        function createPart(rings) {
+            let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+            const outerRing = rings[0];
+            if (outerRing) {
+                outerRing.forEach(coord => {
+                    if (coord[0] < minX) minX = coord[0];
+                    if (coord[0] > maxX) maxX = coord[0];
+                    if (coord[1] < minY) minY = coord[1];
+                    if (coord[1] > maxY) maxY = coord[1];
+                });
+            }
+            return {
+                bbox: { minX, minY, maxX, maxY },
+                rings: rings
+            };
+        }
+
+        // Initialize Globe game
+        async function initGame() {
+            drawLoading();
+            try {
+                // Fetch map data (approx 170KB compressed)
+                const response = await fetch('https://cdn.jsdelivr.net/gh/nvkelso/natural-earth-vector@master/geojson/ne_110m_admin_0_countries.geojson');
+                const geojson = await response.json();
+                
+                // Filter out Antarctica
+                allFeatures = geojson.features.filter(f => {
+                    const name = f.properties && (f.properties.NAME || f.properties.name);
+                    return name && name !== "Antarctica";
+                });
+
+                // Precompute names, parts, bboxes, and distance culling parameters
+                allFeatures.forEach(feature => {
+                    feature.properties.name = feature.properties.NAME || feature.properties.name;
+                    
+                    let parts = [];
+                    if (feature.geometry.type === 'Polygon') {
+                        if (feature.geometry.coordinates.length > 0) {
+                            parts.push(createPart(feature.geometry.coordinates));
+                        }
+                    } else if (feature.geometry.type === 'MultiPolygon') {
+                        feature.geometry.coordinates.forEach(polygon => {
+                            if (polygon.length > 0) {
+                                parts.push(createPart(polygon));
+                            }
+                        });
+                    }
+
+                    // Compute overall bounding box
+                    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+                    parts.forEach(part => {
+                        if (part.bbox.minX < minX) minX = part.bbox.minX;
+                        if (part.bbox.minY < minY) minY = part.bbox.minY;
+                        if (part.bbox.maxX > maxX) maxX = part.bbox.maxX;
+                        if (part.bbox.maxY > maxY) maxY = part.bbox.maxY;
+                    });
+
+                    feature.bbox = { minX, minY, maxX, maxY };
+                    feature.parts = parts;
+
+                    // Centroid/center calculations for visibility check
+                    feature.center = {
+                        lng: (minX + maxX) / 2,
+                        lat: (minY + maxY) / 2
+                    };
+                    feature.span = Math.max(maxX - minX, maxY - minY);
+                    
+                    // Precompute threshold for culling: cos(90 deg + span_radius)
+                    const maxSpanRad = (feature.span / 2) * Math.PI / 180;
+                    feature.threshold = -Math.sin(Math.min(Math.PI / 3, maxSpanRad));
+                });
+
+                // Load stored states
+                loadState();
+                updateManageCountriesBtn();
+                updateModeBtnUI();
+
+                // Enable UI elements
+                skipBtn.disabled = false;
+                hintBtn.disabled = false;
+                suspendBtn.disabled = false;
+
+                pickRandomCountry();
+            } catch (error) {
+                console.error("Error loading globe map data:", error);
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                ctx.fillStyle = '#ef4444';
+                ctx.font = '16px system-ui';
+                ctx.textAlign = 'center';
+                ctx.fillText('Failed to load map data.', canvas.width/2, canvas.height/2);
+            }
+        }
+
+        // Time Spent Stats Integration
+        let sessionStartTime = Date.now();
+        let showTimeSpentActive = false;
+        let timeSpentInterval = null;
+
+        function loadState() {
+            const saved = localStorage.getItem('country_guesser_state');
+            if (saved) {
+                try {
+                    gameState = JSON.parse(saved);
+                    if (!gameState.stats) gameState.stats = { correct: 0, total: 0, streak: 0, bestStreak: 0 };
+                    if (!gameState.weights) gameState.weights = {};
+                    if (!gameState.reviewQueue) gameState.reviewQueue = [];
+                    if (!gameState.suspended) gameState.suspended = {};
+                    if (!gameState.deck) gameState.deck = [];
+                    if (!gameState.drawnInCycle) gameState.drawnInCycle = [];
+                    
+                    // Globe mode specific setups
+                    if (!gameState.statsGlobe) gameState.statsGlobe = { correct: 0, total: 0, streak: 0, bestStreak: 0 };
+                    if (!gameState.deckGlobe) gameState.deckGlobe = [];
+                    if (!gameState.drawnInCycleGlobe) gameState.drawnInCycleGlobe = [];
+                    
+                    if (gameState.totalTimeSpent === undefined) gameState.totalTimeSpent = 0;
+                    if (!gameState.selectionMode) gameState.selectionMode = 'deck';
+                } catch (e) {
+                    console.error("Failed to parse game state, using defaults", e);
+                }
+            } else {
+                gameState.suspended = {};
+                gameState.deck = [];
+                gameState.drawnInCycle = [];
+                gameState.deckGlobe = [];
+                gameState.drawnInCycleGlobe = [];
+                gameState.totalTimeSpent = 0;
+                gameState.selectionMode = 'deck';
+            }
+        }
+
+        function saveState() {
+            const now = Date.now();
+            const elapsedSeconds = Math.floor((now - sessionStartTime) / 1000);
+            if (elapsedSeconds > 0) {
+                gameState.totalTimeSpent = (gameState.totalTimeSpent || 0) + elapsedSeconds;
+                sessionStartTime += elapsedSeconds * 1000;
+            }
+            localStorage.setItem('country_guesser_state', JSON.stringify(gameState));
+        }
+
+        setInterval(saveState, 10000);
+        window.addEventListener('beforeunload', saveState);
+        window.addEventListener('pagehide', saveState);
+
+        function shuffleArray(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+        }
+
+        // Draw from Globe deck
+        function getNextFromDeck() {
+            if (!gameState.deckGlobe) {
+                gameState.deckGlobe = [];
+            }
+            if (!gameState.drawnInCycleGlobe) {
+                gameState.drawnInCycleGlobe = [];
+            }
+            
+            const activeFeatures = getActiveFeatures();
+            const activeNames = activeFeatures.map(f => f.properties.name);
+            
+            // Clean suspended items from deck lists
+            gameState.deckGlobe = gameState.deckGlobe.filter(name => activeNames.includes(name));
+            gameState.drawnInCycleGlobe = gameState.drawnInCycleGlobe.filter(name => activeNames.includes(name));
+            
+            if (gameState.deckGlobe.length === 0) {
+                if (activeNames.length === 0) return null;
+                gameState.deckGlobe = [...activeNames];
+                gameState.drawnInCycleGlobe = [];
+                shuffleArray(gameState.deckGlobe);
+            } else {
+                // Add any missing active names back (newly unsuspended)
+                activeNames.forEach(name => {
+                    if (!gameState.deckGlobe.includes(name) && !gameState.drawnInCycleGlobe.includes(name)) {
+                        const randPos = Math.floor(Math.random() * (gameState.deckGlobe.length + 1));
+                        gameState.deckGlobe.splice(randPos, 0, name);
+                    }
+                });
+            }
+            
+            const selected = gameState.deckGlobe.shift();
+            if (selected) {
+                gameState.drawnInCycleGlobe.push(selected);
+            }
+            saveState();
+            return selected;
+        }
+
+        function resetState() {
+            if (confirm("Are you sure you want to reset all your learning progress and statistics?")) {
+                gameState = {
+                    weights: {},
+                    reviewQueue: [],
+                    suspended: {},
+                    deck: [],
+                    drawnInCycle: [],
+                    deckGlobe: [],
+                    drawnInCycleGlobe: [],
+                    totalTimeSpent: 0,
+                    selectionMode: 'deck',
+                    stats: { correct: 0, total: 0, streak: 0, bestStreak: 0 },
+                    statsGlobe: { correct: 0, total: 0, streak: 0, bestStreak: 0 }
+                };
+                sessionStartTime = Date.now();
+                saveState();
+
+                updateManageCountriesBtn();
+                updateStatsUI();
+                updateModeBtnUI();
+                if (showTimeSpentActive) {
+                    updateTimeStatsUI();
+                }
+                pickRandomCountry();
+            }
+        }
+
+        function toggleTimeStats() {
+            const btn = document.getElementById('timeStatsBtn');
+            showTimeSpentActive = !showTimeSpentActive;
+            
+            if (showTimeSpentActive) {
+                updateTimeStatsUI();
+                timeSpentInterval = setInterval(updateTimeStatsUI, 1000);
+            } else {
+                if (timeSpentInterval) {
+                    clearInterval(timeSpentInterval);
+                    timeSpentInterval = null;
+                }
+                btn.textContent = "View Time Spent";
+            }
+        }
+
+        function updateTimeStatsUI() {
+            const btn = document.getElementById('timeStatsBtn');
+            const totalSeconds = (gameState.totalTimeSpent || 0) + Math.floor((Date.now() - sessionStartTime) / 1000);
+            
+            const hours = Math.floor(totalSeconds / 3600);
+            const minutes = Math.floor((totalSeconds % 3600) / 60);
+            const seconds = totalSeconds % 60;
+            
+            let timeStr = "";
+            if (hours > 0) timeStr += `${hours}h `;
+            if (minutes > 0 || hours > 0) timeStr += `${minutes}m `;
+            timeStr += `${seconds}s`;
+            
+            btn.textContent = `Time Spent: ${timeStr}`;
+        }
+
+        function toggleSelectionMode() {
+            gameState.selectionMode = gameState.selectionMode === 'weighted' ? 'deck' : 'weighted';
+            saveState();
+            updateModeBtnUI();
+        }
+
+        function updateModeBtnUI() {
+            const btn = document.getElementById('modeToggleBtn');
+            if (btn) {
+                btn.textContent = gameState.selectionMode === 'weighted' ? "Mode: Weighted Random" : "Mode: Shuffled Deck";
+            }
+        }
+
+        // Initialize the keyboard selection cursor to the country closest to the center
+        function initSelectionCursor() {
+            const activeFeatures = getActiveFeatures();
+            if (activeFeatures.length === 0) {
+                currentSelectionName = null;
+                return;
+            }
+            
+            const currentLng = lambda0 * 180 / Math.PI;
+            const currentLat = phi0 * 180 / Math.PI;
+            
+            let closestFeature = activeFeatures[0];
+            let minDistance = Infinity;
+            
+            activeFeatures.forEach(feature => {
+                let dLng = feature.center.lng - currentLng;
+                while (dLng < -180) dLng += 360;
+                while (dLng > 180) dLng -= 360;
+                const dLat = feature.center.lat - currentLat;
+                const dist = Math.sqrt(dLat*dLat + dLng*dLng);
+                if (dist < minDistance) {
+                    minDistance = dist;
+                    closestFeature = feature;
+                }
+            });
+            
+            currentSelectionName = closestFeature.properties.name;
+        }
+
+        // Rotate the globe camera to center on a country
+        function rotateToCountry(feature) {
+            lambda0 = feature.center.lng * Math.PI / 180;
+            phi0 = feature.center.lat * Math.PI / 180;
+            
+            // Keep lambda0 in [-pi, pi]
+            while (lambda0 < -Math.PI) lambda0 += Math.PI * 2;
+            while (lambda0 > Math.PI) lambda0 -= Math.PI * 2;
+            
+            drawGlobe();
+        }
+
+        // Find and select the next active country in a direction, and center the camera on it
+        function findNextCountryInDirection(dir) {
+            const activeFeatures = getActiveFeatures();
+            if (activeFeatures.length <= 1) return;
+            
+            let current = activeFeatures.find(f => f.properties.name === currentSelectionName);
+            if (!current) {
+                initSelectionCursor();
+                if (currentSelectionName) {
+                    const feat = activeFeatures.find(f => f.properties.name === currentSelectionName);
+                    if (feat) rotateToCountry(feat);
+                }
+                return;
+            }
+            
+            let bestMatch = null;
+            let bestScore = Infinity;
+            
+            const lat1 = current.center.lat;
+            const lng1 = current.center.lng;
+            
+            activeFeatures.forEach(feature => {
+                if (feature.properties.name === current.properties.name) return;
+                
+                const lat2 = feature.center.lat;
+                const lng2 = feature.center.lng;
+                
+                let dLng = lng2 - lng1;
+                while (dLng < -180) dLng += 360;
+                while (dLng > 180) dLng -= 360;
+                const dLat = lat2 - lat1;
+                
+                const dist = Math.sqrt(dLat*dLat + dLng*dLng);
+                
+                let isDirectional = false;
+                let alignmentScore = dist;
+                
+                // Directional checks with horizontal/vertical penalties to favor primary axes
+                if (dir === 'right') {
+                    if (dLng > 0) {
+                        isDirectional = true;
+                        alignmentScore = dist + Math.abs(dLat) * 2;
+                    }
+                } else if (dir === 'left') {
+                    if (dLng < 0) {
+                        isDirectional = true;
+                        alignmentScore = dist + Math.abs(dLat) * 2;
+                    }
+                } else if (dir === 'up') {
+                    if (dLat > 0) {
+                        isDirectional = true;
+                        alignmentScore = dist + Math.abs(dLng) * 2;
+                    }
+                } else if (dir === 'down') {
+                    if (dLat < 0) {
+                        isDirectional = true;
+                        alignmentScore = dist + Math.abs(dLng) * 2;
+                    }
+                }
+                
+                if (isDirectional && alignmentScore < bestScore) {
+                    bestScore = alignmentScore;
+                    bestMatch = feature;
+                }
+            });
+            
+            // Fallback: If no country in the strict direction, find closest overall
+            if (!bestMatch) {
+                let minOverallDist = Infinity;
+                activeFeatures.forEach(feature => {
+                    if (feature.properties.name === current.properties.name) return;
+                    
+                    let dLng = feature.center.lng - lng1;
+                    while (dLng < -180) dLng += 360;
+                    while (dLng > 180) dLng -= 360;
+                    const dLat = feature.center.lat - lat1;
+                    const dist = Math.sqrt(dLat*dLat + dLng*dLng);
+                    
+                    if (dist < minOverallDist) {
+                        minOverallDist = dist;
+                        bestMatch = feature;
+                    }
+                });
+            }
+            
+            if (bestMatch) {
+                currentSelectionName = bestMatch.properties.name;
+                rotateToCountry(bestMatch);
+            }
+        }
+
+        // Pick next target country
+        function pickRandomCountry() {
+            isAnswered = false;
+            clickedCountryName = null;
+            hoveredCountryName = null;
+            canvas.style.cursor = 'default';
+            
+            nextBtn.style.display = "none";
+            skipBtn.style.display = "inline-block";
+            hintBtn.disabled = false;
+            suspendBtn.disabled = false;
+            
+            messageEl.textContent = "";
+            messageEl.className = "";
+
+            const activeFeatures = getActiveFeatures();
+            if (activeFeatures.length === 0) {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                ctx.fillStyle = '#94a3b8';
+                ctx.font = '16px system-ui';
+                ctx.textAlign = 'center';
+                ctx.fillText('All countries are suspended!', canvas.width/2, canvas.height/2 - 10);
+                ctx.fillText('Please unsuspend some in Manage Countries.', canvas.width/2, canvas.height/2 + 15);
+                
+                skipBtn.disabled = true;
+                hintBtn.disabled = true;
+                suspendBtn.disabled = true;
+                document.getElementById('targetCountryDisplay').textContent = "None";
+                messageEl.textContent = "No active countries to display.";
+                messageEl.className = "message-incorrect";
+                return;
+            }
+
+            skipBtn.disabled = false;
+
+            let selectedCountryName = "";
+            const activeReviewQueue = gameState.reviewQueue.filter(name => 
+                activeFeatures.some(f => f.properties.name === name)
+            );
+            const reviewProbability = gameState.selectionMode === 'weighted' ? 0.45 : 0.35;
+            const shouldReview = activeReviewQueue.length > 0 && Math.random() < reviewProbability;
+
+            if (shouldReview) {
+                const randomIndex = Math.floor(Math.random() * activeReviewQueue.length);
+                selectedCountryName = activeReviewQueue[randomIndex];
+            } else {
+                if (gameState.selectionMode === 'weighted') {
+                    let totalWeight = 0;
+                    const countryWeights = activeFeatures.map(f => {
+                        const name = f.properties.name;
+                        const w = gameState.weights[name] !== undefined ? gameState.weights[name] : 100;
+                        totalWeight += w;
+                        return { name, weight: w };
+                    });
+
+                    let r = Math.random() * totalWeight;
+                    for (let i = 0; i < countryWeights.length; i++) {
+                        r -= countryWeights[i].weight;
+                        if (r <= 0) {
+                            selectedCountryName = countryWeights[i].name;
+                            break;
+                        }
+                    }
+                    if (!selectedCountryName && countryWeights.length > 0) {
+                        selectedCountryName = countryWeights[countryWeights.length - 1].name;
+                    }
+                } else {
+                    selectedCountryName = getNextFromDeck();
+                }
+            }
+
+            const feature = activeFeatures.find(f => f.properties.name === selectedCountryName);
+            if (!feature) {
+                const randomIndex = Math.floor(Math.random() * activeFeatures.length);
+                targetCountryName = activeFeatures[randomIndex].properties.name;
+            } else {
+                targetCountryName = selectedCountryName;
+            }
+
+            document.getElementById('targetCountryDisplay').textContent = targetCountryName;
+
+            initSelectionCursor();
+            drawGlobe();
+            updateStatsUI();
+        }
+
+        // Normalize longitude differences for 180-meridian wrap
+        function normalizeLngDiff(diff) {
+            while (diff < -Math.PI) diff += Math.PI * 2;
+            while (diff > Math.PI) diff -= Math.PI * 2;
+            return diff;
+        }
+
+        // Render Graticules (grid overlay)
+        function drawGraticules() {
+            ctx.strokeStyle = document.body.classList.contains('dark-mode') ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)';
+            ctx.lineWidth = 1;
+            
+            const cosPhi0 = Math.cos(phi0);
+            const sinPhi0 = Math.sin(phi0);
+            
+            // Latitudes
+            for (let latDeg = -80; latDeg <= 80; latDeg += 20) {
+                const lat = latDeg * Math.PI / 180;
+                let first = true;
+                ctx.beginPath();
+                for (let lngDeg = -180; lngDeg <= 180; lngDeg += 5) {
+                    const lng = lngDeg * Math.PI / 180;
+                    const dLng = normalizeLngDiff(lng - lambda0);
+                    
+                    const cosC = Math.sin(lat) * sinPhi0 + Math.cos(lat) * cosPhi0 * Math.cos(dLng);
+                    if (cosC >= 0) {
+                        const x = canvas.width / 2 + R * Math.cos(lat) * Math.sin(dLng);
+                        const y = canvas.height / 2 - R * (cosPhi0 * Math.sin(lat) - sinPhi0 * Math.cos(lat) * Math.cos(dLng));
+                        if (first) {
+                            ctx.moveTo(x, y);
+                            first = false;
+                        } else {
+                            ctx.lineTo(x, y);
+                        }
+                    } else {
+                        first = true;
+                    }
+                }
+                ctx.stroke();
+            }
+            
+            // Longitudes
+            for (let lngDeg = -180; lngDeg < 180; lngDeg += 20) {
+                const lng = lngDeg * Math.PI / 180;
+                let first = true;
+                ctx.beginPath();
+                for (let latDeg = -90; latDeg <= 90; latDeg += 5) {
+                    const lat = latDeg * Math.PI / 180;
+                    const dLng = normalizeLngDiff(lng - lambda0);
+                    
+                    const cosC = Math.sin(lat) * sinPhi0 + Math.cos(lat) * cosPhi0 * Math.cos(dLng);
+                    if (cosC >= 0) {
+                        const x = canvas.width / 2 + R * Math.cos(lat) * Math.sin(dLng);
+                        const y = canvas.height / 2 - R * (cosPhi0 * Math.sin(lat) - sinPhi0 * Math.cos(lat) * Math.cos(dLng));
+                        if (first) {
+                            ctx.moveTo(x, y);
+                            first = false;
+                        } else {
+                            ctx.lineTo(x, y);
+                        }
+                    } else {
+                        first = true;
+                    }
+                }
+                ctx.stroke();
+            }
+        }
+
+        // Main rendering function for the 3D Globe
+        function drawGlobe() {
+            const isDark = document.body.classList.contains('dark-mode');
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            const centerX = canvas.width / 2;
+            const centerY = canvas.height / 2;
+            
+            // 1. Draw flat ocean circle (removes 3D lighting cue, uses darker slate backgrounds)
+            ctx.fillStyle = isDark ? '#020617' : '#cbd5e1';
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, R, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Save state for circular clipping boundary
+            ctx.save();
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, R, 0, Math.PI * 2);
+            ctx.clip();
+            
+            // 2. Draw Grid Lines (Disabled to remove 3D spherical grid cues)
+            // drawGraticules();
+            
+            // Precompute projection constants
+            const cosPhi0 = Math.cos(phi0);
+            const sinPhi0 = Math.sin(phi0);
+            
+            // 3. Filter countries by visible hemisphere (distance culling)
+            const visibleFeatures = [];
+            allFeatures.forEach(feature => {
+                const name = feature.properties.name;
+                const isSuspended = !!gameState.suspended[name];
+                if (isSuspended) return;
+                
+                const latc = feature.center.lat * Math.PI / 180;
+                const lngc = feature.center.lng * Math.PI / 180;
+                const dLng = normalizeLngDiff(lngc - lambda0);
+                const cosD = Math.sin(latc) * sinPhi0 + Math.cos(latc) * cosPhi0 * Math.cos(dLng);
+                
+                if (cosD >= feature.threshold) {
+                    visibleFeatures.push(feature);
+                }
+            });
+            
+            // Draw visible country polygons
+            visibleFeatures.forEach(feature => {
+                const name = feature.properties.name;
+                
+                let fillStyle = '';
+                let strokeStyle = '';
+                let lineWidth = 1.0;
+                
+                if (isAnswered) {
+                    if (name === targetCountryName) {
+                        fillStyle = isDark ? 'rgba(16, 185, 129, 0.45)' : 'rgba(16, 185, 129, 0.55)';
+                        strokeStyle = isDark ? '#34d399' : '#059669';
+                        lineWidth = 1.8;
+                    } else if (name === clickedCountryName) {
+                        fillStyle = isDark ? 'rgba(239, 68, 68, 0.45)' : 'rgba(239, 68, 68, 0.55)';
+                        strokeStyle = isDark ? '#f87171' : '#dc2626';
+                        lineWidth = 1.8;
+                    } else {
+                        fillStyle = isDark ? '#1e293b' : '#ffffff';
+                        strokeStyle = isDark ? '#475569' : '#64748b';
+                    }
+                } else {
+                    if (name === currentSelectionName) {
+                        // Keyboard selection cursor (Amber/Gold accent)
+                        fillStyle = isDark ? 'rgba(245, 158, 11, 0.35)' : 'rgba(245, 158, 11, 0.45)';
+                        strokeStyle = isDark ? '#fbbf24' : '#d97706';
+                        lineWidth = 1.8;
+                    } else if (name === hoveredCountryName) {
+                        // Hover matches sky-blue primary button theme
+                        fillStyle = isDark ? 'rgba(56, 189, 248, 0.15)' : 'rgba(2, 132, 199, 0.12)';
+                        strokeStyle = isDark ? '#38bdf8' : '#0284c7';
+                        lineWidth = 1.4;
+                    } else {
+                        // Default landmass style matching container backgrounds
+                        fillStyle = isDark ? '#1e293b' : '#ffffff';
+                        strokeStyle = isDark ? '#475569' : '#64748b';
+                    }
+                }
+                
+                ctx.fillStyle = fillStyle;
+                ctx.strokeStyle = strokeStyle;
+                ctx.lineWidth = lineWidth;
+                
+                feature.parts.forEach(part => {
+                    part.rings.forEach(ring => {
+                        let first = true;
+                        ctx.beginPath();
+                        for (let i = 0; i < ring.length; i++) {
+                            const coord = ring[i];
+                            const lng = coord[0] * Math.PI / 180;
+                            const lat = coord[1] * Math.PI / 180;
+                            const dLng = normalizeLngDiff(lng - lambda0);
+                            
+                            const cosC = Math.sin(lat) * sinPhi0 + Math.cos(lat) * cosPhi0 * Math.cos(dLng);
+                            if (cosC >= 0) {
+                                const x = centerX + R * Math.cos(lat) * Math.sin(dLng);
+                                const y = centerY - R * (cosPhi0 * Math.sin(lat) - sinPhi0 * Math.cos(lat) * Math.cos(dLng));
+                                if (first) {
+                                    ctx.moveTo(x, y);
+                                    first = false;
+                                } else {
+                                    ctx.lineTo(x, y);
+                                }
+                            } else {
+                                first = true;
+                            }
+                        }
+                        ctx.fill();
+                        ctx.stroke();
+                    });
+                });
+            });
+            
+            ctx.restore(); // release clipping boundary
+            
+            // 4. Glossy Radial Shadow overlay for 3D effect (Temporarily commented out)
+            /*
+            const shadowGrad = ctx.createRadialGradient(
+                centerX - R * 0.3, centerY - R * 0.3, 0,
+                centerX, centerY, R
+            );
+            shadowGrad.addColorStop(0, 'rgba(255, 255, 255, 0.15)');
+            shadowGrad.addColorStop(0.5, 'rgba(255, 255, 255, 0.0)');
+            shadowGrad.addColorStop(0.8, 'rgba(0, 0, 0, 0.05)');
+            shadowGrad.addColorStop(1, 'rgba(0, 0, 0, 0.45)');
+            
+            ctx.fillStyle = shadowGrad;
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, R, 0, Math.PI * 2);
+            ctx.fill();
+            */
+            
+            // Globe outer ring (slate grey matching card borders)
+            ctx.strokeStyle = isDark ? '#334155' : '#cbd5e1';
+            ctx.lineWidth = 2.0;
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, R, 0, Math.PI * 2);
+            ctx.stroke();
+        }
+
+        // Ray-casting point-in-polygon check
+        function isPointInPolygon(point, rings) {
+            const x = point[0];
+            const y = point[1];
+            let inside = false;
+            
+            const outerRing = rings[0];
+            for (let i = 0, j = outerRing.length - 1; i < outerRing.length; j = i++) {
+                const xi = outerRing[i][0];
+                const yi = outerRing[i][1];
+                const xj = outerRing[j][0];
+                const yj = outerRing[j][1];
+                
+                const intersect = ((yi > y) !== (yj > y))
+                    && (x < (xj - xi) * (y - yi) / (yj - yi) + xi);
+                if (intersect) inside = !inside;
+            }
+            
+            if (!inside) return false;
+            
+            // Check holes (inside hole = outside country)
+            for (let k = 1; k < rings.length; k++) {
+                const hole = rings[k];
+                let insideHole = false;
+                for (let i = 0, j = hole.length - 1; i < hole.length; j = i++) {
+                    const xi = hole[i][0];
+                    const yi = hole[i][1];
+                    const xj = hole[j][0];
+                    const yj = hole[j][1];
+                    const intersect = ((yi > y) !== (yj > y))
+                        && (x < (xj - xi) * (y - yi) / (yj - yi) + xi);
+                    if (intersect) insideHole = !insideHole;
+                }
+                if (insideHole) return false;
+            }
+            return true;
+        }
+
+        // Find country under canvas coordinates using screen-space checking
+        function getCountryAtPoint(clientX, clientY) {
+            const rect = canvas.getBoundingClientRect();
+            const clickX = clientX - rect.left;
+            const clickY = clientY - rect.top;
+            
+            const centerX = canvas.width / 2;
+            const centerY = canvas.height / 2;
+            
+            const dx = clickX - centerX;
+            const dy = clickY - centerY;
+            if (dx*dx + dy*dy > R*R) return null; // clicked outside the globe circle
+            
+            // Precompute projection constants for the current view angle
+            const cosPhi0 = Math.cos(phi0);
+            const sinPhi0 = Math.sin(phi0);
+            
+            const activeFeatures = getActiveFeatures();
+            const visibleFeatures = [];
+            
+            // Filter visible countries
+            activeFeatures.forEach(feature => {
+                const latc = feature.center.lat * Math.PI / 180;
+                const lngc = feature.center.lng * Math.PI / 180;
+                const dLng = normalizeLngDiff(lngc - lambda0);
+                const cosD = Math.sin(latc) * sinPhi0 + Math.cos(latc) * cosPhi0 * Math.cos(dLng);
+                
+                if (cosD >= feature.threshold) {
+                    visibleFeatures.push(feature);
+                }
+            });
+            
+            // Project each visible country's rings to screen space and check if the click point is inside
+            for (let f = 0; f < visibleFeatures.length; f++) {
+                const feature = visibleFeatures[f];
+                let inside = false;
+                
+                for (let p = 0; p < feature.parts.length; p++) {
+                    const part = feature.parts[p];
+                    
+                    const projectedRings = [];
+                    let minSX = Infinity, maxSX = -Infinity, minSY = Infinity, maxSY = -Infinity;
+                    
+                    for (let r = 0; r < part.rings.length; r++) {
+                        const ring = part.rings[r];
+                        const projectedRing = [];
+                        
+                        for (let i = 0; i < ring.length; i++) {
+                            const coord = ring[i];
+                            const lng = coord[0] * Math.PI / 180;
+                            const lat = coord[1] * Math.PI / 180;
+                            const dLng = normalizeLngDiff(lng - lambda0);
+                            
+                            const cosC = Math.sin(lat) * sinPhi0 + Math.cos(lat) * cosPhi0 * Math.cos(dLng);
+                            if (cosC >= 0) {
+                                const x = centerX + R * Math.cos(lat) * Math.sin(dLng);
+                                const y = centerY - R * (cosPhi0 * Math.sin(lat) - sinPhi0 * Math.cos(lat) * Math.cos(dLng));
+                                projectedRing.push([x, y]);
+                                
+                                if (x < minSX) minSX = x;
+                                if (x > maxSX) maxSX = x;
+                                if (y < minSY) minSY = y;
+                                if (y > maxSY) maxSY = y;
+                            }
+                        }
+                        if (projectedRing.length >= 3) {
+                            projectedRings.push(projectedRing);
+                        }
+                    }
+                    
+                    // Simple screen bounding box check
+                    if (clickX >= minSX && clickX <= maxSX && clickY >= minSY && clickY <= maxSY) {
+                        if (projectedRings.length > 0 && isPointInPolygon([clickX, clickY], projectedRings)) {
+                            inside = true;
+                            break;
+                        }
+                    }
+                }
+                
+                if (inside) {
+                    return feature.properties.name;
+                }
+            }
+            
+            return null;
+        }
+
+        // Evaluate guess
+        function evaluateGuess(clicked) {
+            isAnswered = true;
+            clickedCountryName = clicked;
+            if (clicked) {
+                currentSelectionName = clicked;
+            }
+            
+            hintBtn.disabled = true;
+            suspendBtn.disabled = true;
+            
+            nextBtn.style.display = "inline-block";
+            skipBtn.style.display = "none";
+            nextBtn.focus();
+            
+            if (gameState.weights[targetCountryName] === undefined) {
+                gameState.weights[targetCountryName] = 100;
+            }
+            
+            const isCorrect = (clicked === targetCountryName);
+            
+            if (isCorrect) {
+                messageEl.innerHTML = `<strong>Correct!</strong> That is ${escapeHTML(targetCountryName)}.`;
+                messageEl.className = "message-correct";
+                
+                gameState.statsGlobe.correct++;
+                gameState.statsGlobe.total++;
+                gameState.statsGlobe.streak++;
+                if (gameState.statsGlobe.streak > gameState.statsGlobe.bestStreak) {
+                    gameState.statsGlobe.bestStreak = gameState.statsGlobe.streak;
+                }
+                
+                gameState.weights[targetCountryName] = Math.max(15, gameState.weights[targetCountryName] - 30);
+                
+                const qIndex = gameState.reviewQueue.indexOf(targetCountryName);
+                if (qIndex !== -1) {
+                    gameState.reviewQueue.splice(qIndex, 1);
+                }
+            } else {
+                if (clicked) {
+                    messageEl.innerHTML = `<strong>Incorrect!</strong> You clicked on <strong>${escapeHTML(clicked)}</strong>. ${escapeHTML(targetCountryName)} is highlighted in green.`;
+                } else {
+                    messageEl.innerHTML = `<strong>Incorrect!</strong> You clicked on the ocean. ${escapeHTML(targetCountryName)} is highlighted in green.`;
+                }
+                messageEl.className = "message-incorrect";
+                
+                gameState.statsGlobe.total++;
+                gameState.statsGlobe.streak = 0;
+                
+                gameState.weights[targetCountryName] = Math.min(800, gameState.weights[targetCountryName] + 200);
+                
+                if (!gameState.reviewQueue.includes(targetCountryName)) {
+                    gameState.reviewQueue.push(targetCountryName);
+                }
+            }
+            
+            saveState();
+            updateStatsUI();
+            drawGlobe();
+        }
+
+        function skipCurrentCountry() {
+            if (isAnswered) return;
+            evaluateGuess(null);
+        }
+
+        // Stats dashboard
+        function updateStatsUI() {
+            const correct = gameState.statsGlobe.correct;
+            const total = gameState.statsGlobe.total;
+            const streak = gameState.statsGlobe.streak;
+            const bestStreak = gameState.statsGlobe.bestStreak;
+            const accuracy = total > 0 ? Math.round((correct / total) * 100) : 0;
+            
+            const activeFeatures = getActiveFeatures();
+            const activeReviewCount = gameState.reviewQueue.filter(name => 
+                activeFeatures.some(f => f.properties.name === name)
+            ).length;
+
+            let masteredCount = 0;
+            let practiceCount = 0;
+
+            activeFeatures.forEach(f => {
+                const name = f.properties.name;
+                const w = gameState.weights[name] !== undefined ? gameState.weights[name] : 100;
+                if (w <= 20) masteredCount++;
+                if (w >= 200) practiceCount++;
+            });
+
+            document.getElementById('statStreak').textContent = streak;
+            document.getElementById('statBestStreak').textContent = bestStreak;
+            document.getElementById('statAccuracy').textContent = accuracy + '%';
+            document.getElementById('statReview').textContent = activeReviewCount;
+            document.getElementById('statMastered').textContent = masteredCount;
+            document.getElementById('statTotal').textContent = total;
+        }
+
+        function showHint() {
+            if (!targetCountryName) return;
+            const feature = allFeatures.find(f => f.properties.name === targetCountryName);
+            if (!feature) return;
+            
+            const firstLetter = targetCountryName.charAt(0);
+            const length = targetCountryName.length;
+            const words = targetCountryName.split(' ').length;
+            const continent = feature.properties.CONTINENT || feature.properties.continent || feature.properties.REGION_UN || "";
+            
+            let hintText = `💡 Hint: Starts with "${firstLetter}" (${length} chars, ${words} word${words > 1 ? 's' : ''})`;
+            if (continent) {
+                hintText += ` located in ${continent}`;
+            }
+            
+            messageEl.textContent = hintText;
+            messageEl.className = "message-correct";
+        }
+
+        function escapeHTML(str) {
+            return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+        }
+
+        // Active activeFeatures retrieval
+        function getActiveFeatures() {
+            return allFeatures.filter(f => !gameState.suspended[f.properties.name]);
+        }
+
+        function suspendCurrentCountry() {
+            if (!targetCountryName) return;
+            gameState.suspended[targetCountryName] = true;
+            saveState();
+            
+            messageEl.textContent = `Suspended ${targetCountryName}`;
+            messageEl.className = "message-incorrect";
+            
+            pickRandomCountry();
+            updateManageCountriesBtn();
+        }
+
+        // Mouse Physics Interaction (Drag to Rotate, Scroll to Zoom)
+        let isDragging = false;
+        let lastMouseX = 0;
+        let lastMouseY = 0;
+        let dragStartMouseX = 0;
+        let dragStartMouseY = 0;
+        let dragStartTime = 0;
+
+        canvas.addEventListener('wheel', function(e) {
+            e.preventDefault();
+            const zoomFactor = 1.15;
+            if (e.deltaY < 0) {
+                R = Math.min(3000, R * zoomFactor);
+            } else {
+                R = Math.max(150, R / zoomFactor);
+            }
+            drawGlobe();
+        }, { passive: false });
+
+        canvas.addEventListener('mousedown', function(e) {
+            isDragging = true;
+            lastMouseX = e.clientX;
+            lastMouseY = e.clientY;
+            dragStartMouseX = e.clientX;
+            dragStartMouseY = e.clientY;
+            dragStartTime = Date.now();
+            canvas.style.cursor = 'grabbing';
+        });
+
+        canvas.addEventListener('mousemove', function(e) {
+            if (isDragging) {
+                const dx = e.clientX - lastMouseX;
+                const dy = e.clientY - lastMouseY;
+                
+                // Sensitivity matches the spherical surface speed
+                lambda0 = lambda0 - (dx / R);
+                phi0 = phi0 + (dy / R);
+                
+                // Clamp tilt to poles (approx 90 deg)
+                phi0 = Math.max(-Math.PI / 2 + 0.01, Math.min(Math.PI / 2 - 0.01, phi0));
+                
+                // Wrap longitude
+                while (lambda0 < -Math.PI) lambda0 += Math.PI * 2;
+                while (lambda0 > Math.PI) lambda0 -= Math.PI * 2;
+                
+                lastMouseX = e.clientX;
+                lastMouseY = e.clientY;
+                
+                drawGlobe();
+            } else if (!isAnswered) {
+                const country = getCountryAtPoint(e.clientX, e.clientY);
+                if (country !== hoveredCountryName) {
+                    hoveredCountryName = country;
+                    drawGlobe();
+                }
+            }
+        });
+
+        window.addEventListener('mouseup', function(e) {
+            if (isDragging) {
+                isDragging = false;
+                canvas.style.cursor = 'default';
+                
+                const dx = e.clientX - dragStartMouseX;
+                const dy = e.clientY - dragStartMouseY;
+                const dist = Math.sqrt(dx*dx + dy*dy);
+                const elapsed = Date.now() - dragStartTime;
+                
+                // Evaluate click only if mouse barely moved during a quick release
+                if (dist < 6 && elapsed < 350) {
+                    const rect = canvas.getBoundingClientRect();
+                    const mx = e.clientX - rect.left;
+                    const my = e.clientY - rect.top;
+                    
+                    const clicked = getCountryAtPoint(e.clientX, e.clientY);
+                    if (!isAnswered) {
+                        evaluateGuess(clicked);
+                    }
+                }
+            }
+        });
+
+        // Keyboard shortcuts
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                closeCountriesModal();
+                return;
+            }
+
+            const searchInput = document.getElementById('modalSearchInput');
+            if (document.activeElement === searchInput) {
+                return; // ignore shortcuts when searching countries inside the modal
+            }
+
+            const key = e.key.toLowerCase();
+
+            // 'x' shortcut to suspend target country
+            if (key === 'x') {
+                e.preventDefault();
+                suspendCurrentCountry();
+                return;
+            }
+
+            // 'n' shortcut to load next question (only when current is answered)
+            if (key === 'n') {
+                if (isAnswered) {
+                    e.preventDefault();
+                    pickRandomCountry();
+                }
+                return;
+            }
+
+            // Enter or Space key to submit current selection
+            if (e.key === 'Enter' || e.key === ' ') {
+                if (!isAnswered && currentSelectionName) {
+                    e.preventDefault();
+                    evaluateGuess(currentSelectionName);
+                }
+                return;
+            }
+
+            // 'hjkl' keys to move between countries (spatial navigation)
+            if (!isAnswered) {
+                if (key === 'h') {
+                    e.preventDefault();
+                    findNextCountryInDirection('left');
+                    return;
+                } else if (key === 'l') {
+                    e.preventDefault();
+                    findNextCountryInDirection('right');
+                    return;
+                } else if (key === 'k') {
+                    e.preventDefault();
+                    findNextCountryInDirection('up');
+                    return;
+                } else if (key === 'j') {
+                    e.preventDefault();
+                    findNextCountryInDirection('down');
+                    return;
+                }
+            }
+
+            // 'io' zoom keys
+            const zoomFactor = 1.15;
+            if (key === 'i') {
+                e.preventDefault();
+                R = Math.min(3000, R * zoomFactor);
+                drawGlobe();
+            } else if (key === 'o') {
+                e.preventDefault();
+                R = Math.max(150, R / zoomFactor);
+                drawGlobe();
+            }
+        });
+
+        // Manage Countries Modal
+        function openCountriesModal() {
+            const modal = document.getElementById('countriesModal');
+            if (!modal) return;
+            
+            modal.style.display = 'flex';
+            
+            const searchInput = document.getElementById('modalSearchInput');
+            if (searchInput) {
+                searchInput.value = '';
+                searchInput.focus();
+                if (!searchInput.dataset.hasListener) {
+                    searchInput.addEventListener('input', () => renderCountriesList());
+                    searchInput.dataset.hasListener = 'true';
+                }
+            }
+
+            const sortSelect = document.getElementById('modalSortSelect');
+            if (sortSelect) {
+                sortSelect.value = 'name';
+                if (!sortSelect.dataset.hasListener) {
+                    sortSelect.addEventListener('change', () => renderCountriesList());
+                    sortSelect.dataset.hasListener = 'true';
+                }
+            }
+            
+            renderCountriesList();
+        }
+
+        function closeCountriesModal() {
+            const modal = document.getElementById('countriesModal');
+            if (modal) {
+                modal.style.display = 'none';
+            }
+        }
+
+        function renderCountriesList() {
+            const body = document.getElementById('countriesModalBody');
+            const searchInput = document.getElementById('modalSearchInput');
+            if (!body) return;
+
+            const query = searchInput ? searchInput.value.trim().toLowerCase() : '';
+            
+            let listContainer = document.getElementById('modalCountriesList');
+            if (!listContainer) {
+                listContainer = document.createElement('div');
+                listContainer.id = 'modalCountriesList';
+                listContainer.style.display = 'flex';
+                listContainer.style.flexDirection = 'column';
+                listContainer.style.gap = '4px';
+                body.appendChild(listContainer);
+            }
+            
+            listContainer.innerHTML = '';
+            const sortVal = document.getElementById('modalSortSelect')?.value || 'name';
+            
+            const sortedCountries = [...allFeatures].sort((a, b) => {
+                if (sortVal === 'suspended') {
+                    const aSusp = !!gameState.suspended[a.properties.name];
+                    const bSusp = !!gameState.suspended[b.properties.name];
+                    if (aSusp !== bSusp) {
+                        return aSusp ? -1 : 1;
+                    }
+                }
+                return a.properties.name.localeCompare(b.properties.name);
+            });
+            
+            const filtered = sortedCountries.filter(c => 
+                c.properties.name.toLowerCase().includes(query)
+            );
+            
+            if (filtered.length === 0) {
+                listContainer.innerHTML = '<p style="text-align: center; color: var(--muted); margin: 20px 0;">No countries match your search.</p>';
+                return;
+            }
+            
+            filtered.forEach(c => {
+                const name = c.properties.name;
+                const isSuspended = !!gameState.suspended[name];
+                
+                const item = document.createElement('div');
+                item.className = 'country-list-item';
+                
+                const nameSpan = document.createElement('span');
+                nameSpan.className = 'country-name';
+                nameSpan.textContent = name;
+                
+                const btn = document.createElement('button');
+                btn.className = isSuspended ? 'country-status-btn btn-status-suspended' : 'country-status-btn btn-status-active';
+                btn.textContent = isSuspended ? 'Suspended' : 'Active';
+                
+                btn.onclick = () => {
+                    toggleCountrySuspension(name, btn);
+                };
+                
+                item.appendChild(nameSpan);
+                item.appendChild(btn);
+                listContainer.appendChild(item);
+            });
+        }
+
+        function toggleCountrySuspension(name, btn) {
+            const isCurrentlySuspended = !!gameState.suspended[name];
+            if (isCurrentlySuspended) {
+                delete gameState.suspended[name];
+                btn.textContent = 'Active';
+                btn.className = 'country-status-btn btn-status-active';
+            } else {
+                gameState.suspended[name] = true;
+                btn.textContent = 'Suspended';
+                btn.className = 'country-status-btn btn-status-suspended';
+            }
+            saveState();
+            updateManageCountriesBtn();
+            updateStatsUI();
+            
+            const activeFeatures = getActiveFeatures();
+            const isCurrentActive = activeFeatures.some(f => f.properties.name === targetCountryName);
+            if (!isCurrentActive) {
+                pickRandomCountry();
+            } else {
+                drawGlobe();
+            }
+        }
+
+        function updateManageCountriesBtn() {
+            const btn = document.getElementById('manageCountriesBtn');
+            if (btn) {
+                const suspendedCount = Object.keys(gameState.suspended).filter(k => gameState.suspended[k]).length;
+                btn.textContent = `Manage Countries (${suspendedCount} suspended)`;
+            }
+        }
+
+        // Theme switching
+        function loadTheme() {
+            const savedTheme = localStorage.getItem('country_guesser_theme');
+            const themeBtn = document.getElementById('themeToggleBtn');
+            if (savedTheme === 'dark') {
+                document.body.classList.add('dark-mode');
+                if (themeBtn) themeBtn.textContent = "Light Mode";
+            } else {
+                document.body.classList.remove('dark-mode');
+                if (themeBtn) themeBtn.textContent = "Dark Mode";
+            }
+        }
+
+        function toggleTheme() {
+            const isDark = document.body.classList.toggle('dark-mode');
+            localStorage.setItem('country_guesser_theme', isDark ? 'dark' : 'light');
+            
+            const themeBtn = document.getElementById('themeToggleBtn');
+            if (themeBtn) {
+                themeBtn.textContent = isDark ? "Light Mode" : "Dark Mode";
+            }
+            
+            drawGlobe();
+        }
+
+        window.onload = function() {
+            loadTheme();
+            initGame();
+        };
+    </script>
+</body>
+</html>
