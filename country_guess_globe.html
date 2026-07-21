@@ -25,9 +25,9 @@
         body.dark-mode {
             --bg: #000000;
             --text: #e2e8f0;
-            --muted: #94a3b8;
-            --accent: #1e293b;
-            --border: #2d3748;
+            --muted: #a3a3a3;
+            --accent: #171717; /* Neutral dark gray instead of slate #1e293b to remove blue tint */
+            --border: #262626; /* Neutral dark gray instead of slate #2d3748 */
             --primary: #ffffff;
             --primary-hover: #e2e8f0;
             --focus-shadow: 0 0 0 3px rgba(248, 250, 252, 0.15);
@@ -77,6 +77,7 @@
             height: auto;
             aspect-ratio: 1 / 1;
             cursor: default;
+            touch-action: none;
         }
 
         .controls-container {
@@ -371,16 +372,13 @@
         <div class="game-container">
             <!-- Prompt Display instead of Input -->
             <div id="promptContainer" style="width: 100%;">
-                Find: <span id="targetCountryDisplay">Loading...</span>
+                <span id="targetCountryDisplay">Loading...</span>
             </div>
 
             <div class="canvas-container">
                 <canvas id="mapCanvas" width="400" height="400"></canvas>
             </div>
-            
-            <div style="font-size: 0.85rem; color: var(--muted); text-align: center; margin-top: -16px; line-height: 1.4;">
-                Drag / hjkl to rotate & select • Scroll / io to zoom • Click / Enter to guess
-            </div>
+
 
             <div class="controls-container">
                 <div class="button-group">
@@ -530,12 +528,151 @@
             };
         }
 
+        // Perpendicular distance calculation for Ramer-Douglas-Peucker simplification
+        function perpendicularDistance(p, p1, p2) {
+            const dx = p2[0] - p1[0];
+            const dy = p2[1] - p1[1];
+            if (dx === 0 && dy === 0) {
+                const dX = p[0] - p1[0];
+                const dY = p[1] - p1[1];
+                return Math.sqrt(dX * dX + dY * dY);
+            }
+            const num = Math.abs(dy * p[0] - dx * p[1] + p2[0] * p1[1] - p2[1] * p1[0]);
+            const den = Math.sqrt(dx * dx + dy * dy);
+            return num / den;
+        }
+
+        // Adaptive polygon simplification (preserves 100% detail for small countries, scales tolerance for large countries)
+        function simplifyRingRDP(ring, epsilon) {
+            if (!ring || ring.length <= 4 || epsilon <= 0) return ring;
+            const pts = ring.slice(0, ring.length - 1);
+
+            function rdp(points) {
+                if (points.length <= 2) return points;
+                let maxDist = 0;
+                let index = 0;
+                const end = points.length - 1;
+
+                for (let i = 1; i < end; i++) {
+                    const dist = perpendicularDistance(points[i], points[0], points[end]);
+                    if (dist > maxDist) {
+                        maxDist = dist;
+                        index = i;
+                    }
+                }
+
+                if (maxDist > epsilon) {
+                    const rec1 = rdp(points.slice(0, index + 1));
+                    const rec2 = rdp(points.slice(index));
+                    return rec1.slice(0, rec1.length - 1).concat(rec2);
+                } else {
+                    return [points[0], points[end]];
+                }
+            }
+
+            const simplified = rdp(pts);
+            simplified.push(simplified[0]);
+            return simplified.length >= 4 ? simplified : ring;
+        }
+
+        let featureNeighbors = {};
+
+        // Compute geographic neighbor graph (land border proximity + nearest neighbor fallback for island nations)
+        function computeNeighbors() {
+            featureNeighbors = {};
+            allFeatures.forEach(f => {
+                featureNeighbors[f.properties.name] = new Set();
+            });
+
+            for (let i = 0; i < allFeatures.length; i++) {
+                const f1 = allFeatures[i];
+                const b1 = f1.bbox;
+                const name1 = f1.properties.name;
+
+                for (let j = i + 1; j < allFeatures.length; j++) {
+                    const f2 = allFeatures[j];
+                    const b2 = f2.bbox;
+                    const name2 = f2.properties.name;
+
+                    if (b1.minX - b2.maxX > 0.5 || b2.minX - b1.maxX > 0.5 ||
+                        b1.minY - b2.maxY > 0.5 || b2.minY - b1.maxY > 0.5) {
+                        continue;
+                    }
+
+                    let isNbr = false;
+                    for (let p1Idx = 0; p1Idx < f1.parts.length; p1Idx++) {
+                        const ring1 = f1.parts[p1Idx].rings[0];
+                        if (!ring1) continue;
+                        const step1 = Math.max(1, Math.floor(ring1.length / 120));
+
+                        for (let k1 = 0; k1 < ring1.length; k1 += step1) {
+                            const pt1 = ring1[k1];
+
+                            for (let p2Idx = 0; p2Idx < f2.parts.length; p2Idx++) {
+                                const ring2 = f2.parts[p2Idx].rings[0];
+                                if (!ring2) continue;
+                                const step2 = Math.max(1, Math.floor(ring2.length / 120));
+
+                                for (let k2 = 0; k2 < ring2.length; k2 += step2) {
+                                    const pt2 = ring2[k2];
+                                    let dLng = pt1[0] - pt2[0];
+                                    while (dLng < -180) dLng += 360;
+                                    while (dLng > 180) dLng -= 360;
+                                    const dLat = pt1[1] - pt2[1];
+                                    if (dLng * dLng + dLat * dLat <= 0.25) { // <= 0.5 deg
+                                        isNbr = true;
+                                        break;
+                                    }
+                                }
+                                if (isNbr) break;
+                            }
+                            if (isNbr) break;
+                        }
+                        if (isNbr) break;
+                    }
+
+                    if (isNbr) {
+                        featureNeighbors[name1].add(name2);
+                        featureNeighbors[name2].add(name1);
+                    }
+                }
+            }
+
+            // Fallback nearest neighbors for island nations
+            allFeatures.forEach(f1 => {
+                const name1 = f1.properties.name;
+                if (featureNeighbors[name1].size === 0) {
+                    const dists = [];
+                    allFeatures.forEach(f2 => {
+                        const name2 = f2.properties.name;
+                        if (name1 === name2) return;
+                        let dLng = f1.center.lng - f2.center.lng;
+                        while (dLng < -180) dLng += 360;
+                        while (dLng > 180) dLng -= 360;
+                        const dLat = f1.center.lat - f2.center.lat;
+                        const dist = Math.sqrt(dLng * dLng + dLat * dLat);
+                        dists.push({ name: name2, dist: dist });
+                    });
+                    dists.sort((a, b) => a.dist - b.dist);
+                    dists.slice(0, 4).forEach(item => {
+                        featureNeighbors[name1].add(item.name);
+                        featureNeighbors[item.name].add(name1);
+                    });
+                }
+            });
+
+            // Convert sets to arrays
+            Object.keys(featureNeighbors).forEach(key => {
+                featureNeighbors[key] = Array.from(featureNeighbors[key]);
+            });
+        }
+
         // Initialize Globe game
         async function initGame() {
             drawLoading();
             try {
-                // Fetch map data (approx 170KB compressed)
-                const response = await fetch('https://cdn.jsdelivr.net/gh/nvkelso/natural-earth-vector@master/geojson/ne_110m_admin_0_countries.geojson');
+                // Fetch 50m medium-resolution map data (high detail for smaller countries and island nations)
+                const response = await fetch('https://cdn.jsdelivr.net/gh/nvkelso/natural-earth-vector@master/geojson/ne_50m_admin_0_countries.geojson');
                 const geojson = await response.json();
                 
                 // Filter out Antarctica
@@ -544,46 +681,84 @@
                     return name && name !== "Antarctica";
                 });
 
-                // Precompute names, parts, bboxes, and distance culling parameters
+                // Precompute names, parts, bboxes, and adaptive simplification parameters
                 allFeatures.forEach(feature => {
                     feature.properties.name = feature.properties.NAME || feature.properties.name;
                     
-                    let parts = [];
+                    let rawPolygons = [];
                     if (feature.geometry.type === 'Polygon') {
                         if (feature.geometry.coordinates.length > 0) {
-                            parts.push(createPart(feature.geometry.coordinates));
+                            rawPolygons.push(feature.geometry.coordinates);
                         }
                     } else if (feature.geometry.type === 'MultiPolygon') {
                         feature.geometry.coordinates.forEach(polygon => {
                             if (polygon.length > 0) {
-                                parts.push(createPart(polygon));
+                                rawPolygons.push(polygon);
                             }
                         });
                     }
 
-                    // Compute overall bounding box
+                    // Compute overall bounding box & span first
                     let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-                    parts.forEach(part => {
-                        if (part.bbox.minX < minX) minX = part.bbox.minX;
-                        if (part.bbox.minY < minY) minY = part.bbox.minY;
-                        if (part.bbox.maxX > maxX) maxX = part.bbox.maxX;
-                        if (part.bbox.maxY > maxY) maxY = part.bbox.maxY;
+                    rawPolygons.forEach(polygon => {
+                        polygon.forEach(ring => {
+                            ring.forEach(coord => {
+                                if (coord[0] < minX) minX = coord[0];
+                                if (coord[0] > maxX) maxX = coord[0];
+                                if (coord[1] < minY) minY = coord[1];
+                                if (coord[1] > maxY) maxY = coord[1];
+                            });
+                        });
+                    });
+
+                    const span = Math.max(maxX - minX, maxY - minY);
+                    feature.span = span;
+
+                    // Epsilon is 0 (100% full 50m detail) for small countries, and scales for larger landmasses
+                    const epsilon = span < 4.0 ? 0 : Math.min(0.2, (span - 4.0) * 0.0035);
+
+                    let parts = [];
+                    rawPolygons.forEach(polygon => {
+                        const simplifiedRings = polygon.map(ring => simplifyRingRDP(ring, epsilon));
+                        parts.push(createPart(simplifiedRings));
                     });
 
                     feature.bbox = { minX, minY, maxX, maxY };
                     feature.parts = parts;
 
-                    // Centroid/center calculations for visibility check
-                    feature.center = {
-                        lng: (minX + maxX) / 2,
-                        lat: (minY + maxY) / 2
-                    };
-                    feature.span = Math.max(maxX - minX, maxY - minY);
+                    // Find the largest part (mainland) to calculate representative center
+                    let largestPart = parts[0];
+                    let maxArea = -1;
+                    parts.forEach(part => {
+                        const w = part.bbox.maxX - part.bbox.minX;
+                        const h = part.bbox.maxY - part.bbox.minY;
+                        const area = w * h;
+                        if (area > maxArea) {
+                            maxArea = area;
+                            largestPart = part;
+                        }
+                    });
+
+                    // Centroid/center calculations based on the largest part/mainland
+                    if (largestPart) {
+                        feature.center = {
+                            lng: (largestPart.bbox.minX + largestPart.bbox.maxX) / 2,
+                            lat: (largestPart.bbox.minY + largestPart.bbox.maxY) / 2
+                        };
+                    } else {
+                        feature.center = {
+                            lng: (minX + maxX) / 2,
+                            lat: (minY + maxY) / 2
+                        };
+                    }
                     
                     // Precompute threshold for culling: cos(90 deg + span_radius)
                     const maxSpanRad = (feature.span / 2) * Math.PI / 180;
                     feature.threshold = -Math.sin(Math.min(Math.PI / 3, maxSpanRad));
                 });
+
+                // Compute geographic neighbor graph
+                computeNeighbors();
 
                 // Load stored states
                 loadState();
@@ -765,7 +940,13 @@
         }
 
         function toggleSelectionMode() {
-            gameState.selectionMode = gameState.selectionMode === 'weighted' ? 'deck' : 'weighted';
+            if (gameState.selectionMode === 'deck') {
+                gameState.selectionMode = 'neighbor';
+            } else if (gameState.selectionMode === 'neighbor') {
+                gameState.selectionMode = 'weighted';
+            } else {
+                gameState.selectionMode = 'deck';
+            }
             saveState();
             updateModeBtnUI();
         }
@@ -773,7 +954,13 @@
         function updateModeBtnUI() {
             const btn = document.getElementById('modeToggleBtn');
             if (btn) {
-                btn.textContent = gameState.selectionMode === 'weighted' ? "Mode: Weighted Random" : "Mode: Shuffled Deck";
+                if (gameState.selectionMode === 'neighbor') {
+                    btn.textContent = "Mode: Neighbor Hop";
+                } else if (gameState.selectionMode === 'weighted') {
+                    btn.textContent = "Mode: Weighted Random";
+                } else {
+                    btn.textContent = "Mode: Shuffled Deck";
+                }
             }
         }
 
@@ -806,16 +993,89 @@
             currentSelectionName = closestFeature.properties.name;
         }
 
-        // Rotate the globe camera to center on a country
-        function rotateToCountry(feature) {
-            lambda0 = feature.center.lng * Math.PI / 180;
-            phi0 = feature.center.lat * Math.PI / 180;
-            
-            // Keep lambda0 in [-pi, pi]
-            while (lambda0 < -Math.PI) lambda0 += Math.PI * 2;
-            while (lambda0 > Math.PI) lambda0 -= Math.PI * 2;
-            
-            drawGlobe();
+        let rotationAnimationId = null;
+
+        // Rotate the globe camera to center on a country with smooth easing animation
+        function rotateToCountry(feature, duration = 220) {
+            if (rotationAnimationId) {
+                cancelAnimationFrame(rotationAnimationId);
+                rotationAnimationId = null;
+            }
+
+            const targetLambda = feature.center.lng * Math.PI / 180;
+            let targetPhi = feature.center.lat * Math.PI / 180;
+            targetPhi = Math.max(-Math.PI / 2 + 0.01, Math.min(Math.PI / 2 - 0.01, targetPhi));
+
+            let dLambda = targetLambda - lambda0;
+            while (dLambda < -Math.PI) dLambda += Math.PI * 2;
+            while (dLambda > Math.PI) dLambda -= Math.PI * 2;
+
+            const startLambda = lambda0;
+            const startPhi = phi0;
+            const dPhi = targetPhi - startPhi;
+
+            const startTime = performance.now();
+
+            function animate(now) {
+                const elapsed = now - startTime;
+                const progress = Math.min(1, elapsed / duration);
+                // Cubic ease-out curve for smooth deceleration
+                const ease = 1 - Math.pow(1 - progress, 3);
+
+                lambda0 = startLambda + dLambda * ease;
+                phi0 = startPhi + dPhi * ease;
+
+                while (lambda0 < -Math.PI) lambda0 += Math.PI * 2;
+                while (lambda0 > Math.PI) lambda0 -= Math.PI * 2;
+
+                drawGlobe();
+
+                if (progress < 1) {
+                    rotationAnimationId = requestAnimationFrame(animate);
+                } else {
+                    rotationAnimationId = null;
+                }
+            }
+
+            rotationAnimationId = requestAnimationFrame(animate);
+        }
+
+        let zoomAnimationId = null;
+        let currentZoomTargetR = 180;
+
+        // Smooth zoom in/out with cubic ease-out animation
+        function zoomTo(targetRadius, duration = 220) {
+            if (zoomAnimationId) {
+                cancelAnimationFrame(zoomAnimationId);
+                zoomAnimationId = null;
+            }
+
+            const clampedTargetR = Math.max(150, Math.min(3000, targetRadius));
+            currentZoomTargetR = clampedTargetR;
+            const startR = R;
+            const dR = clampedTargetR - startR;
+
+            if (Math.abs(dR) < 0.1) return;
+
+            const startTime = performance.now();
+
+            function animate(now) {
+                const elapsed = now - startTime;
+                const progress = Math.min(1, elapsed / duration);
+                // Cubic ease-out curve for smooth deceleration
+                const ease = 1 - Math.pow(1 - progress, 3);
+
+                R = startR + dR * ease;
+                drawGlobe();
+
+                if (progress < 1) {
+                    zoomAnimationId = requestAnimationFrame(animate);
+                } else {
+                    zoomAnimationId = null;
+                }
+            }
+
+            zoomAnimationId = requestAnimationFrame(animate);
         }
 
         // Find and select the next active country in a direction, and center the camera on it
@@ -975,6 +1235,18 @@
                     if (!selectedCountryName && countryWeights.length > 0) {
                         selectedCountryName = countryWeights[countryWeights.length - 1].name;
                     }
+                } else if (gameState.selectionMode === 'neighbor') {
+                    if (targetCountryName && featureNeighbors[targetCountryName]) {
+                        const activeNbrs = featureNeighbors[targetCountryName].filter(nbrName =>
+                            activeFeatures.some(f => f.properties.name === nbrName)
+                        );
+                        if (activeNbrs.length > 0) {
+                            selectedCountryName = activeNbrs[Math.floor(Math.random() * activeNbrs.length)];
+                        }
+                    }
+                    if (!selectedCountryName) {
+                        selectedCountryName = getNextFromDeck();
+                    }
                 } else {
                     selectedCountryName = getNextFromDeck();
                 }
@@ -1071,8 +1343,8 @@
             const centerX = canvas.width / 2;
             const centerY = canvas.height / 2;
             
-            // 1. Draw flat ocean circle (removes 3D lighting cue, uses darker slate backgrounds)
-            ctx.fillStyle = isDark ? '#020617' : '#cbd5e1';
+            // 1. Draw flat ocean circle matching card background
+            ctx.fillStyle = isDark ? '#1e293b' : '#ffffff';
             ctx.beginPath();
             ctx.arc(centerX, centerY, R, 0, Math.PI * 2);
             ctx.fill();
@@ -1125,8 +1397,8 @@
                         strokeStyle = isDark ? '#f87171' : '#dc2626';
                         lineWidth = 1.8;
                     } else {
-                        fillStyle = isDark ? '#1e293b' : '#ffffff';
-                        strokeStyle = isDark ? '#475569' : '#64748b';
+                        fillStyle = isDark ? 'rgba(226, 232, 240, 0.12)' : 'rgba(34, 34, 34, 0.08)';
+                        strokeStyle = isDark ? '#e2e8f0' : '#222222';
                     }
                 } else {
                     if (name === currentSelectionName) {
@@ -1135,14 +1407,14 @@
                         strokeStyle = isDark ? '#fbbf24' : '#d97706';
                         lineWidth = 1.8;
                     } else if (name === hoveredCountryName) {
-                        // Hover matches sky-blue primary button theme
-                        fillStyle = isDark ? 'rgba(56, 189, 248, 0.15)' : 'rgba(2, 132, 199, 0.12)';
-                        strokeStyle = isDark ? '#38bdf8' : '#0284c7';
+                        // Hover matches secondary button (Hint button) theme
+                        fillStyle = isDark ? '#334155' : '#f1f5f9';
+                        strokeStyle = isDark ? '#475569' : '#cbd5e1';
                         lineWidth = 1.4;
                     } else {
-                        // Default landmass style matching container backgrounds
-                        fillStyle = isDark ? '#1e293b' : '#ffffff';
-                        strokeStyle = isDark ? '#475569' : '#64748b';
+                        // Default landmass style matching manual.html outline map
+                        fillStyle = isDark ? 'rgba(226, 232, 240, 0.12)' : 'rgba(34, 34, 34, 0.08)';
+                        strokeStyle = isDark ? '#e2e8f0' : '#222222';
                     }
                 }
                 
@@ -1248,8 +1520,11 @@
         // Find country under canvas coordinates using screen-space checking
         function getCountryAtPoint(clientX, clientY) {
             const rect = canvas.getBoundingClientRect();
-            const clickX = clientX - rect.left;
-            const clickY = clientY - rect.top;
+            if (!rect.width || !rect.height) return null;
+            const scaleX = canvas.width / rect.width;
+            const scaleY = canvas.height / rect.height;
+            const clickX = (clientX - rect.left) * scaleX;
+            const clickY = (clientY - rect.top) * scaleY;
             
             const centerX = canvas.width / 2;
             const centerY = canvas.height / 2;
@@ -1329,11 +1604,30 @@
                 }
             }
             
+            // Fallback hit tolerance for tiny countries & island nations (span < 2.5 deg)
+            for (let f = 0; f < visibleFeatures.length; f++) {
+                const feature = visibleFeatures[f];
+                if (feature.span < 2.5) {
+                    const latc = feature.center.lat * Math.PI / 180;
+                    const lngc = feature.center.lng * Math.PI / 180;
+                    const dLng = normalizeLngDiff(lngc - lambda0);
+                    const cosC = Math.sin(latc) * sinPhi0 + Math.cos(latc) * cosPhi0 * Math.cos(dLng);
+                    if (cosC >= 0) {
+                        const cx = centerX + R * Math.cos(latc) * Math.sin(dLng);
+                        const cy = centerY - R * (cosPhi0 * Math.sin(latc) - sinPhi0 * Math.cos(latc) * Math.cos(dLng));
+                        const distSq = (clickX - cx) * (clickX - cx) + (clickY - cy) * (clickY - cy);
+                        if (distSq <= 144) { // ~12px radius touch/click hit box for tiny features
+                            return feature.properties.name;
+                        }
+                    }
+                }
+            }
+
             return null;
         }
 
         // Evaluate guess
-        function evaluateGuess(clicked) {
+        function evaluateGuess(clicked, isSkip = false) {
             isAnswered = true;
             clickedCountryName = clicked;
             if (clicked) {
@@ -1341,7 +1635,7 @@
             }
             
             hintBtn.disabled = true;
-            suspendBtn.disabled = true;
+            suspendBtn.disabled = false;
             
             nextBtn.style.display = "inline-block";
             skipBtn.style.display = "none";
@@ -1371,10 +1665,12 @@
                     gameState.reviewQueue.splice(qIndex, 1);
                 }
             } else {
-                if (clicked) {
+                if (isSkip) {
+                    messageEl.innerHTML = `<strong>Skipped!</strong> ${escapeHTML(targetCountryName)} is highlighted in green.`;
+                } else if (clicked) {
                     messageEl.innerHTML = `<strong>Incorrect!</strong> You clicked on <strong>${escapeHTML(clicked)}</strong>. ${escapeHTML(targetCountryName)} is highlighted in green.`;
                 } else {
-                    messageEl.innerHTML = `<strong>Incorrect!</strong> You clicked on the ocean. ${escapeHTML(targetCountryName)} is highlighted in green.`;
+                    messageEl.innerHTML = `<strong>Incorrect!</strong> ${escapeHTML(targetCountryName)} is highlighted in green.`;
                 }
                 messageEl.className = "message-incorrect";
                 
@@ -1390,12 +1686,22 @@
             
             saveState();
             updateStatsUI();
-            drawGlobe();
+            
+            if (!isCorrect) {
+                const targetFeature = allFeatures.find(f => f.properties.name === targetCountryName);
+                if (targetFeature) {
+                    rotateToCountry(targetFeature, 400);
+                } else {
+                    drawGlobe();
+                }
+            } else {
+                drawGlobe();
+            }
         }
 
         function skipCurrentCountry() {
             if (isAnswered) return;
-            evaluateGuess(null);
+            evaluateGuess(null, true);
         }
 
         // Stats dashboard
@@ -1480,15 +1786,20 @@
         canvas.addEventListener('wheel', function(e) {
             e.preventDefault();
             const zoomFactor = 1.15;
+            let targetR = currentZoomTargetR || R;
             if (e.deltaY < 0) {
-                R = Math.min(3000, R * zoomFactor);
+                targetR = Math.min(3000, targetR * zoomFactor);
             } else {
-                R = Math.max(150, R / zoomFactor);
+                targetR = Math.max(150, targetR / zoomFactor);
             }
-            drawGlobe();
+            zoomTo(targetR, 220);
         }, { passive: false });
 
         canvas.addEventListener('mousedown', function(e) {
+            if (rotationAnimationId) {
+                cancelAnimationFrame(rotationAnimationId);
+                rotationAnimationId = null;
+            }
             isDragging = true;
             lastMouseX = e.clientX;
             lastMouseY = e.clientY;
@@ -1527,6 +1838,17 @@
             }
         });
 
+        // Touch Interaction Variables
+        let isTouchDragging = false;
+        let isPinching = false;
+        let lastTouchX = 0;
+        let lastTouchY = 0;
+        let touchStartX = 0;
+        let touchStartY = 0;
+        let touchStartTime = 0;
+        let initialPinchDist = 0;
+        let initialPinchR = 180;
+
         window.addEventListener('mouseup', function(e) {
             if (isDragging) {
                 isDragging = false;
@@ -1537,18 +1859,111 @@
                 const dist = Math.sqrt(dx*dx + dy*dy);
                 const elapsed = Date.now() - dragStartTime;
                 
-                // Evaluate click only if mouse barely moved during a quick release
+                // Evaluate click only if mouse barely moved during a quick release and clicked a country
                 if (dist < 6 && elapsed < 350) {
-                    const rect = canvas.getBoundingClientRect();
-                    const mx = e.clientX - rect.left;
-                    const my = e.clientY - rect.top;
-                    
                     const clicked = getCountryAtPoint(e.clientX, e.clientY);
-                    if (!isAnswered) {
+                    if (!isAnswered && clicked !== null) {
                         evaluateGuess(clicked);
                     }
                 }
             }
+        });
+
+        // Touch event listeners for mobile / touchscreen devices
+        canvas.addEventListener('touchstart', function(e) {
+            if (rotationAnimationId) {
+                cancelAnimationFrame(rotationAnimationId);
+                rotationAnimationId = null;
+            }
+            if (e.touches.length === 1) {
+                e.preventDefault();
+                isTouchDragging = true;
+                isPinching = false;
+                const touch = e.touches[0];
+                lastTouchX = touch.clientX;
+                lastTouchY = touch.clientY;
+                touchStartX = touch.clientX;
+                touchStartY = touch.clientY;
+                touchStartTime = Date.now();
+            } else if (e.touches.length === 2) {
+                e.preventDefault();
+                isTouchDragging = false;
+                isPinching = true;
+                const t1 = e.touches[0];
+                const t2 = e.touches[1];
+                initialPinchDist = Math.hypot(t1.clientX - t2.clientX, t1.clientY - t2.clientY);
+                initialPinchR = R;
+            }
+        }, { passive: false });
+
+        canvas.addEventListener('touchmove', function(e) {
+            if (isPinching && e.touches.length >= 2) {
+                if (zoomAnimationId) {
+                    cancelAnimationFrame(zoomAnimationId);
+                    zoomAnimationId = null;
+                }
+                e.preventDefault();
+                const t1 = e.touches[0];
+                const t2 = e.touches[1];
+                const dist = Math.hypot(t1.clientX - t2.clientX, t1.clientY - t2.clientY);
+                if (initialPinchDist > 0) {
+                    const scale = dist / initialPinchDist;
+                    R = Math.max(150, Math.min(3000, initialPinchR * scale));
+                    currentZoomTargetR = R;
+                    drawGlobe();
+                }
+            } else if (isTouchDragging && e.touches.length === 1) {
+                e.preventDefault();
+                const touch = e.touches[0];
+                const dx = touch.clientX - lastTouchX;
+                const dy = touch.clientY - lastTouchY;
+
+                lambda0 = lambda0 - (dx / R);
+                phi0 = phi0 + (dy / R);
+
+                phi0 = Math.max(-Math.PI / 2 + 0.01, Math.min(Math.PI / 2 - 0.01, phi0));
+
+                while (lambda0 < -Math.PI) lambda0 += Math.PI * 2;
+                while (lambda0 > Math.PI) lambda0 -= Math.PI * 2;
+
+                lastTouchX = touch.clientX;
+                lastTouchY = touch.clientY;
+
+                drawGlobe();
+            }
+        }, { passive: false });
+
+        canvas.addEventListener('touchend', function(e) {
+            if (isPinching) {
+                if (e.touches.length < 2) {
+                    isPinching = false;
+                }
+                return;
+            }
+
+            if (isTouchDragging) {
+                isTouchDragging = false;
+                const touch = e.changedTouches[0];
+                if (touch) {
+                    const dx = touch.clientX - touchStartX;
+                    const dy = touch.clientY - touchStartY;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+                    const elapsed = Date.now() - touchStartTime;
+
+                    // Evaluate tap only if touch barely moved during a quick tap and touched a country
+                    if (dist < 10 && elapsed < 400) {
+                        const clicked = getCountryAtPoint(touch.clientX, touch.clientY);
+                        if (!isAnswered && clicked !== null) {
+                            evaluateGuess(clicked);
+                        }
+                    }
+                }
+            }
+        });
+
+        canvas.addEventListener('touchcancel', function(e) {
+            isTouchDragging = false;
+            isPinching = false;
         });
 
         // Keyboard shortcuts
@@ -1613,14 +2028,15 @@
 
             // 'io' zoom keys
             const zoomFactor = 1.15;
+            let targetR = currentZoomTargetR || R;
             if (key === 'i') {
                 e.preventDefault();
-                R = Math.min(3000, R * zoomFactor);
-                drawGlobe();
+                targetR = Math.min(3000, targetR * zoomFactor);
+                zoomTo(targetR, 220);
             } else if (key === 'o') {
                 e.preventDefault();
-                R = Math.max(150, R / zoomFactor);
-                drawGlobe();
+                targetR = Math.max(150, targetR / zoomFactor);
+                zoomTo(targetR, 220);
             }
         });
 
